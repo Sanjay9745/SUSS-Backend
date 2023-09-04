@@ -18,5 +18,4 @@ app.use(bodyParser.urlencoded({ extended: false })); // URL-encoded parsing
 app.use(morgan('dev')); // Logging
 app.use('/api/users', userRoutes); // Routes
 
-
 module.exports = app;
