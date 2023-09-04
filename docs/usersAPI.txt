@@ -1,0 +1,129 @@
+/**
+ * @swagger
+ * tags:
+ *   name: Authentication
+ *   description: User authentication operations
+ */
+
+/**
+ * @swagger
+ * /api/users/register:
+ *   post:
+ *     summary: Register a new user
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *             example:
+ *               name: John Doe
+ *               email: john@example.com
+ *               password: secret123
+ *     responses:
+ *       201:
+ *         description: User registered successfully
+ *       400:
+ *         description: Invalid input data
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /api/users/login:
+ *   post:
+ *     summary: User login
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *             example:
+ *               email: john@example.com
+ *               password: secret123
+ *     responses:
+ *       200:
+ *         description: User logged in successfully
+ *       401:
+ *         description: Unauthorized, invalid credentials
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /api/users/send-otp:
+ *   get:
+ *     summary: Send OTP to user's email
+ *     tags: [Authentication]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: OTP sent successfully
+ *       400:
+ *         description: User not found or already verified
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /api/users/verify-otp:
+ *   get:
+ *     summary: Verify OTP code
+ *     tags: [Authentication]
+ *     parameters:
+ *       - name: code
+ *         in: query
+ *         required: true
+ *         description: OTP code to verify
+ *         schema:
+ *           type: string
+ *       - name: uid
+ *         in: query
+ *         required: true
+ *         description: User ID for OTP verification
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: OTP verified successfully
+ *       400:
+ *         description: Invalid OTP or user already verified
+ *       500:
+ *         description: Internal server error
+ */
+
+/**
+ * @swagger
+ * /api/users/profile:
+ *   get:
+ *     summary: Get user's profile
+ *     tags: [Authentication]
+ *     security:
+ *       - BearerAuth: []
+ *     responses:
+ *       200:
+ *         description: User profile retrieved successfully
+ *       401:
+ *         description: Unauthorized, authentication failed
+ *       500:
+ *         description: Internal server error
+ */
