@@ -2,6 +2,7 @@ const express = require('express');
 const app = express();
 const dotenv = require('dotenv');
 dotenv.config();
+const cors = require("cors")
 const connectToDatabase = require('./config/db');
 const morgan = require('morgan');
 const userRoutes = require('./routes/userRoutes');
@@ -15,6 +16,7 @@ const superAdminRoutes   = require("./routes/superAdminRoutes");
 connectToDatabase();
 
 // Middleware
+app.use(cors())
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(express.static('public')); // Serve static files
