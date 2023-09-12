@@ -6,6 +6,9 @@ const connectToDatabase = require('./config/db');
 const bodyParser = require('body-parser');
 const morgan = require('morgan');
 const userRoutes = require('./routes/userRoutes');
+const vendorRoutes = require("./routes/vendorRoutes")
+const productRoutes = require("./routes/productRoutes");
+const superAdmin    = require("./routes/superAdmin");
 // Load environment variables from .env
 
 
@@ -15,7 +18,12 @@ connectToDatabase();
 // Middleware
 app.use(bodyParser.json()); // JSON parsing
 app.use(bodyParser.urlencoded({ extended: false })); // URL-encoded parsing
-app.use(morgan('dev')); // Logging
-app.use('/api/users', userRoutes); // Routes
+app.use(express.static('public')); // Serve static files
+app.use(express.static('uploads')); // Serve static files
 
+app.use(morgan('dev')); // Logging
+app.use('/api/user', userRoutes); // Routes
+app.use('/api/vendor',vendorRoutes)
+app.use('/api/product',productRoutes)
+app.use('/api/admin', superAdmin); // Routes
 module.exports = app;

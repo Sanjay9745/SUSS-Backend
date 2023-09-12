@@ -34,6 +34,29 @@ router.get("/send-otp", auth, UserController.sendOtp);
 //Router for verify otp
 router.get("/verify-otp", UserController.verifyOtp);
 // Example protected route (requires authentication middleware)
+router.get("/protected", auth, (req, res) => {
+  res.status(200).json({ message: "Protected route" });
+});
+
 router.get("/profile", auth, UserController.userProfile);
+router.patch("/update-profile", auth, UserController.updateProfile);
+router.patch(
+  "/update-password",
+  check("newPassword ")
+    .isLength({ min: 6 })
+    .withMessage("Password must be at least 6 characters long"),
+  auth,
+  UserController.updatePassword
+);
+router.post("/forgot-password", UserController.forgotPassword);
+router.post(
+  "/reset-password",
+  check("newPassword")
+    .isLength({ min: 6 })
+    .withMessage("Password must be at least 6 characters long"),
+  UserController.resetPassword
+);
+router.delete("/delete-account", auth, UserController.deleteAccount);
+
 
 module.exports = router;

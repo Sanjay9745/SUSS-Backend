@@ -2,7 +2,7 @@ const User = require('../models/User'); // Import your User model
 const bcrypt = require('bcryptjs');
 
 // Create a new user in the database
-async function createUser(name, email, password) {
+async function createUser(name, email, password, userType) {
   try {
     // Hash the password
     const salt = await bcrypt.genSalt(10);
@@ -13,6 +13,7 @@ async function createUser(name, email, password) {
       name,
       email,
       password: hashedPassword,
+      userType
     });
 
     // Save the user to the database
@@ -84,10 +85,34 @@ async function findUserAndVerifyOTPCode(userId, code) {
   }
 }
 
+const updateUserProfile = async (userId, data) => {
+  try {
+    const user = await User.findById(userId);
+    if (!user) {
+      return { user: null, message: 'User not found' };
+    }
+    user.name = data.name;
+    await user.save();
+    return { user, message: 'User updated successfully' };
+  } catch (error) {
+    throw error;
+  }
+}
+const DeleteUser = async (userId) => {
+  try {
+    await User.findOneAndDelete({_id:userId});
+   
+    return { message: 'User Deleted successfully' };
+  } catch (error) {
+    throw error;
+  }
+}
 module.exports = {
   createUser,
   findUserByEmail,
   findUserById,
   findUserAndAddOTPCode,
-  findUserAndVerifyOTPCode
+  findUserAndVerifyOTPCode,
+  updateUserProfile,
+  DeleteUser
 };

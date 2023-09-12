@@ -21,6 +21,21 @@ const userSchema = new mongoose.Schema({
   verificationToken: {
     type: String, // Store a token for email verification
   },
+  passwordResetToken: {
+    type: String, // Store a token for password reset
+  },
+  passwordResetTokenExpiresAt: {
+    type: Date, // Store the expiry time of the token
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+  userType: {
+    type: String,
+    enum: ['user', 'vendor','admin'],
+    default: 'user', // Set a default value if needed
+  }
 });
 
 const User = mongoose.model('User', userSchema);
