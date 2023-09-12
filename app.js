@@ -8,7 +8,7 @@ const morgan = require('morgan');
 const userRoutes = require('./routes/userRoutes');
 const vendorRoutes = require("./routes/vendorRoutes")
 const productRoutes = require("./routes/productRoutes");
-const superAdmin    = require("./routes/superAdmin");
+const superAdminRoutes   = require("./routes/superAdminRoutes");
 // Load environment variables from .env
 
 
@@ -25,5 +25,5 @@ app.use(morgan('dev')); // Logging
 app.use('/api/user', userRoutes); // Routes
 app.use('/api/vendor',vendorRoutes)
 app.use('/api/product',productRoutes)
-app.use('/api/admin', superAdmin); // Routes
+app.use('/api/admin', superAdminRoutes); // Routes
 module.exports = app;
