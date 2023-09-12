@@ -31,7 +31,7 @@ const registerSuperAdmin = async (req, res) => {
     if (existingUser) {
       return res.status(400).json({ message: "User already exists" });
     }
-    const newUser = await createAdmin(name, email, password, "admin");
+    const newUser = await createUser(name, email, password, "admin");
     const token = jwt.sign({ userId: newUser._id }, jwtSecretKey, {
       expiresIn: "5d", // 5 days
     });
