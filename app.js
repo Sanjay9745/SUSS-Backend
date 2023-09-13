@@ -27,4 +27,5 @@ app.use('/api/user', userRoutes); // Routes
 app.use('/api/vendor',vendorRoutes)
 app.use('/api/product',productRoutes)
 app.use('/api/admin', superAdminRoutes); // Routes
+
 module.exports = app;
