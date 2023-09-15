@@ -20,10 +20,14 @@ const createProduct = async (req, res) => {
     }
 
     const vendor = req.vendor;
-    const { name, description, categoryId } = req.body;
+    const { name, slug, description, categoryId } = req.body;
 
-    if (!name || !description || !categoryId) {
+    if (!name || !description || !categoryId || !slug) {
       return res.status(400).json({ message: "Please enter all fields" });
+    }
+    const isSlugExist = await Product.findOne({ slug: slug });
+    if (isSlugExist) {
+      return res.status(400).json({ message: "Slug already exist" });
     }
 
     // Create an object to store the images with numbered keys
@@ -82,10 +86,10 @@ const updateProduct = async (req, res) => {
     }
 
     const vendor = req.vendor;
-    const { name, description } = req.body;
-
-    if (!name || !description) {
-      return res.status(400).json({ message: "Please enter all fields" });
+    const { name, slug, description, categoryId } = req.body;
+    const existingProduct = await Product.findOne({ slug: slug });
+    if (existingProduct && existingProduct._id !== req.params.id) {
+      return res.status(400).json({ message: "Slug already exists" });
     }
 
     // Create an object to store the images with numbered keys
@@ -117,14 +121,32 @@ const updateProduct = async (req, res) => {
       }
     }
 
+    const updateFields = {};
+
+    if (name) {
+      updateFields.name = name;
+    }
+
+    if (description) {
+      updateFields.description = description;
+    }
+
+    if (slug) {
+      updateFields.slug = slug;
+    }
+
+    if (Object.keys(imageObj).length > 0) {
+      updateFields.images = imageObj;
+    }
+
+    if (categoryId) {
+      updateFields.categoryId = categoryId;
+    }
+
     const product = await Product.findOneAndUpdate(
-      { vendorId: vendor.vendorId, _id: req.params.id }, // Changed "productId" to "_id"
-      {
-        name,
-        description,
-        images: imageObj, // Update product's images
-      },
-      { new: true } // Return the updated document
+      { vendorId: vendor.vendorId, _id: req.params.id },
+      updateFields,
+      { new: true }
     );
 
     if (!product) {
@@ -177,6 +199,15 @@ const deleteProduct = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
+const getProductFromSlug = async (req,res) =>{
+  try {
+    const product = await Product.findOne({ slug: req.params.slug });
+    res.status(200).json(product);
+  } catch (error) {
+    res.status(400).json(error.message);
+  }
+}
 
 const getAllVariations = async (req, res) => {
   //get variations
@@ -488,6 +519,7 @@ module.exports = {
   createProduct,
   updateProduct,
   deleteProduct,
+  getProductFromSlug,
   getAllProducts,
   getProductById,
   addCategory,

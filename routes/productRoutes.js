@@ -13,7 +13,7 @@ router.get("/get-all-variations", ProductController.getAllVariations);
 router.get("/get-all-categories", ProductController.getAllCategories);
 router.get("/get-all", ProductController.getAllProducts);
 router.get("/get/:productId", ProductController.getProductById);
-
+router.get("/get-product-from-slug", ProductController.getProductFromSlug);
 
 router.patch("/update",productImage,vendorAuth, ProductController.updateProduct);
 router.patch("/update-variation",productImage, vendorAuth, ProductController.updateVariation);

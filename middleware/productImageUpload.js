@@ -20,7 +20,7 @@ const productImage = multer({
   limits: {
     fileSize: 10 * 1024 * 1024, // 10MB limit (in bytes)
   },
-}).array('image', 5); // 'logo' is the field name for the file input, and '5
+}).array('images', 5); // 'logo' is the field name for the file input, and '5
 
 module.exports = productImage;
 
