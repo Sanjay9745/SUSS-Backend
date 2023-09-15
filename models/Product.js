@@ -7,6 +7,8 @@ const productSchema = new mongoose.Schema({
   },
   slug:{
     type:String,
+    required:true,
+    unique:true
   },
   vendorId: { type: String },
   categoryId: { type: String },

@@ -65,6 +65,7 @@ const createProduct = async (req, res) => {
       vendorId: vendor.vendorId,
       categoryId,
       images: imageObj,
+      slug:slug
     });
 
     await product.save();
