@@ -89,8 +89,10 @@ const updateProduct = async (req, res) => {
     const vendor = req.vendor;
     const { name, slug, description, categoryId } = req.body;
     const existingProduct = await Product.findOne({ slug: slug });
-    if (existingProduct && existingProduct._id !== req.params.id) {
+    if (existingProduct) {
+      if(existingProduct.slug !== slug){
       return res.status(400).json({ message: "Slug already exists" });
+      }
     }
 
     // Create an object to store the images with numbered keys
