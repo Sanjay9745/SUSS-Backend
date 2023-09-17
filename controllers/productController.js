@@ -378,30 +378,32 @@ const updateVariation = async (req, res) => {
       await deleteExistingImages(variation.images);
     }
 
-    // Update fields using ternary conditional (one-liner)
-    variation.price = price !== undefined ? price : (variation.price || "");
-    variation.stock = stock !== undefined ? stock : "";
-    variation.size = size !== undefined ? size : "";
-    variation.color = color !== undefined ? color : "";
-    variation.weight = weight !== undefined ? weight : "";
-    variation.dimension.x =
-      dimensionX !== undefined ? dimensionX : "";
-    variation.dimension.y =
-      dimensionY !== undefined ? dimensionY : "";
-    variation.dimension.z =
-      dimensionZ !== undefined ? dimensionZ : "";
-    
-    variation.offer_price =
-      offer_price !== undefined ? offer_price : "";
-    variation.offer_start_date =
-      offer_start_date !== undefined ? offer_start_date : "";
-    variation.offer_end_date =
-      offer_end_date !== undefined ? offer_end_date : "";
-    variation.margin = margin !== undefined ? margin : "";
-    
+// Update fields using ternary conditional with the current value if undefined
+variation.price = price !== undefined ? price : (variation.price || "");
+variation.stock = stock !== undefined ? stock : (variation.stock || "");
+variation.size = size !== undefined ? size : (variation.size || "");
+variation.color = color !== undefined ? color : (variation.color || "");
+variation.weight = weight !== undefined ? weight : (variation.weight || "");
+variation.dimension.x =
+  dimensionX !== undefined ? dimensionX : (variation.dimension.x || "");
+variation.dimension.y =
+  dimensionY !== undefined ? dimensionY : (variation.dimension.y || "");
+variation.dimension.z =
+  dimensionZ !== undefined ? dimensionZ : (variation.dimension.z || "");
 
-    // Create a new 'images' field with the updated image paths
-    variation.images = imageObj;
+variation.offer_price =
+  offer_price !== undefined ? offer_price : (variation.offer_price || "");
+variation.offer_start_date =
+  offer_start_date !== undefined ? offer_start_date : (variation.offer_start_date || "");
+variation.offer_end_date =
+  offer_end_date !== undefined ? offer_end_date : (variation.offer_end_date || "");
+variation.margin = margin !== undefined ? margin : (variation.margin || "");
+
+   // Create a new 'images' field with the updated image paths if imageObj is not empty
+if (Object.keys(imageObj).length > 0) {
+  variation.images = imageObj;
+}
+
 
     await variation.save();
     res.status(200).json({ variation });
