@@ -14,6 +14,7 @@ router.get("/get-all-categories", ProductController.getAllCategories);
 router.get("/get-all", ProductController.getAllProducts);
 router.get("/get/:productId", ProductController.getProductById);
 router.get("/get-product-from-slug", ProductController.getProductFromSlug);
+router.get("/get-product-with-variation/:productId", ProductController.getProductWithVariation);
 
 router.patch("/update/:id",productImage,vendorAuth, ProductController.updateProduct);
 router.patch("/update-variation",productImage, vendorAuth, ProductController.updateVariation);

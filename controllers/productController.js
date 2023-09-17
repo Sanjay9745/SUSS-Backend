@@ -89,10 +89,10 @@ const updateProduct = async (req, res) => {
     const vendor = req.vendor;
     const { name, slug, description, categoryId } = req.body;
     const existingProduct = await Product.findOne({ slug: slug });
-    if (existingProduct) {
-      if(existingProduct.slug !== slug){
+    if (existingProduct && existingProduct.slug !== slug) {
+      
       return res.status(400).json({ message: "Slug already exists" });
-      }
+      
     }
 
     // Create an object to store the images with numbered keys
@@ -459,7 +459,17 @@ const getProductById = async (req, res) => {
     res.status(400).send(error.message);
   }
 };
+const getProductWithVariation = async (req, res) => {
+  const {productId} = req.params;
+  //get product by id
+  try {
 
+    const variations = await Variation.find({productId:productId});
+res.json(variations)
+  } catch (error) {
+    res.status(500).json({message:"error getting variations"})
+  }
+}
 const addCategory = async (req, res) => {
   try {
     const { name } = req.body;
@@ -529,4 +539,5 @@ module.exports = {
   getAllCategories,
   deleteCategory,
   updateCategory,
+  getProductWithVariation
 };
