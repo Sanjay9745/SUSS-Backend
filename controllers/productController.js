@@ -379,25 +379,25 @@ const updateVariation = async (req, res) => {
     }
 
     // Update fields using ternary conditional (one-liner)
-    variation.price = price !== undefined ? price : (variation.price || 0);
-    variation.stock = stock !== undefined ? stock : (variation.stock || 0);
-    variation.size = size !== undefined ? size : null; // Set to null if not provided
-    variation.color = color !== undefined ? color : null; // Set to null if not provided
-    variation.weight = weight !== undefined ? weight : 0; // Set to 0 if not provided
+    variation.price = price !== undefined ? price : (variation.price || "");
+    variation.stock = stock !== undefined ? stock : "";
+    variation.size = size !== undefined ? size : "";
+    variation.color = color !== undefined ? color : "";
+    variation.weight = weight !== undefined ? weight : "";
     variation.dimension.x =
-      dimensionX !== undefined ? dimensionX : 0; // Set to 0 if not provided
+      dimensionX !== undefined ? dimensionX : "";
     variation.dimension.y =
-      dimensionY !== undefined ? dimensionY : 0; // Set to 0 if not provided
+      dimensionY !== undefined ? dimensionY : "";
     variation.dimension.z =
-      dimensionZ !== undefined ? dimensionZ : 0; // Set to 0 if not provided
+      dimensionZ !== undefined ? dimensionZ : "";
     
     variation.offer_price =
-      offer_price !== undefined ? offer_price : null; // Set to null if not provided
+      offer_price !== undefined ? offer_price : "";
     variation.offer_start_date =
-      offer_start_date !== undefined ? offer_start_date : null; // Set to null if not provided
+      offer_start_date !== undefined ? offer_start_date : "";
     variation.offer_end_date =
-      offer_end_date !== undefined ? offer_end_date : null; // Set to null if not provided
-    variation.margin = margin !== undefined ? margin : 0; // Set to 0 if not provided
+      offer_end_date !== undefined ? offer_end_date : "";
+    variation.margin = margin !== undefined ? margin : "";
     
 
     // Create a new 'images' field with the updated image paths
