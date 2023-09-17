@@ -379,27 +379,26 @@ const updateVariation = async (req, res) => {
     }
 
     // Update fields using ternary conditional (one-liner)
-    variation.price = price !== undefined ? price : variation.price;
-    variation.stock = stock !== undefined ? stock : variation.stock;
-    variation.size = size !== undefined ? size : variation.size;
-    variation.color = color !== undefined ? color : variation.color;
-    variation.weight = weight !== undefined ? weight : variation.weight;
+    variation.price = price !== undefined ? price : (variation.price || 0);
+    variation.stock = stock !== undefined ? stock : (variation.stock || 0);
+    variation.size = size !== undefined ? size : null; // Set to null if not provided
+    variation.color = color !== undefined ? color : null; // Set to null if not provided
+    variation.weight = weight !== undefined ? weight : 0; // Set to 0 if not provided
     variation.dimension.x =
-      dimensionX !== undefined ? dimensionX : variation.dimension.x;
+      dimensionX !== undefined ? dimensionX : 0; // Set to 0 if not provided
     variation.dimension.y =
-      dimensionY !== undefined ? dimensionY : variation.dimension.y;
+      dimensionY !== undefined ? dimensionY : 0; // Set to 0 if not provided
     variation.dimension.z =
-      dimensionZ !== undefined ? dimensionZ : variation.dimension.Z;
-
+      dimensionZ !== undefined ? dimensionZ : 0; // Set to 0 if not provided
+    
     variation.offer_price =
-      offer_price !== undefined ? offer_price : variation.offer_price;
+      offer_price !== undefined ? offer_price : null; // Set to null if not provided
     variation.offer_start_date =
-      offer_start_date !== undefined
-        ? offer_start_date
-        : variation.offer_start_date;
+      offer_start_date !== undefined ? offer_start_date : null; // Set to null if not provided
     variation.offer_end_date =
-      offer_end_date !== undefined ? offer_end_date : variation.offer_end_date;
-    variation.margin = margin !== undefined ? margin : variation.margin;
+      offer_end_date !== undefined ? offer_end_date : null; // Set to null if not provided
+    variation.margin = margin !== undefined ? margin : 0; // Set to 0 if not provided
+    
 
     // Create a new 'images' field with the updated image paths
     variation.images = imageObj;
