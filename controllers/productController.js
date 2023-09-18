@@ -167,7 +167,7 @@ const deleteProduct = async (req, res) => {
     const { productId } = req.params;
 
     // Find the product by productId
-    const product = await Product.findById(productId);
+    const product = await Product.findOne({_id:productId,vendorId:req.vendor.vendorId})
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
@@ -309,6 +309,7 @@ const addVariation = async (req, res) => {
       offer_start_date,
       offer_end_date,
       margin,
+      vendorId:vendor.vendorId
     });
 
     await variation.save();
@@ -367,7 +368,7 @@ const updateVariation = async (req, res) => {
       }
     }
 
-    const variation = await Variation.findOne({ _id: variationId });
+    const variation = await Variation.findOne({ _id: variationId,vendorId:req.vendor.vendorId });
 
     if (!variation) {
       return res.status(404).json({ message: "Variation not found" });
@@ -415,11 +416,10 @@ if (Object.keys(imageObj).length > 0) {
 const deleteVariation = async (req, res) => {
   try {
     const { productId, variationId } = req.params;
-
+  
     // Find the product by productId
-    const product = await Product.findById(productId);
+    const product = await Product.findOne({_id:productId,vendorId:req.vendor.vendorId})
     if (!product) return res.status(400).json({ message: "Product not found" });
-
     // Find the variation by variationId
     const variation = await Variation.findById(variationId);
     if (!variation)
@@ -440,7 +440,19 @@ const deleteVariation = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
+const getProductOfVendor = async(req,res)=>{
+  try {
+    const vendor = req.vendor;
+    const products = await Product.find({vendorId:vendor.vendorId});
+    if(!products){
+      res.status(404).json({message:"No Product found"});
 
+    }
+    res.status(200).json(products)
+  } catch (error) {
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+}
 const getAllProducts = async (req, res) => {
   //get products
   try {
@@ -533,6 +545,7 @@ module.exports = {
   createProduct,
   updateProduct,
   deleteProduct,
+  getProductOfVendor,
   getProductFromSlug,
   getAllProducts,
   getProductById,

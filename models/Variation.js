@@ -52,6 +52,10 @@ const variationSchema = new mongoose.Schema({
   margin: {
     type: String,
   },
+  vendorId:{
+    type:String,
+    required:true,
+  }
 });
 
 const Variation = mongoose.model("Variation", variationSchema);
