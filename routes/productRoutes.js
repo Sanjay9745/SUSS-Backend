@@ -18,7 +18,7 @@ router.get("/get-product-with-variation/:productId", ProductController.getProduc
 router.get("/get-products-of-vendor",vendorAuth,ProductController.getProductOfVendor)
 router.patch("/update/:id",productImage,vendorAuth, ProductController.updateProduct);
 router.patch("/update-variation",productImage, vendorAuth, ProductController.updateVariation);
-router.patch("/update-category",superAdminAuth, ProductController.updateCategory);
+router.patch("/update-category/:categoryId",superAdminAuth, ProductController.updateCategory);
 
 
 router.delete("/delete/:productId",vendorAuth, ProductController.deleteProduct);
