@@ -36,12 +36,6 @@ const userSchema = new mongoose.Schema({
     enum: ["user", "vendor", "admin"],
     default: "user", // Set a default value if needed
   },
-  cart: [
-    {
-      productId: { type: String },
-      variationId: { type: String },
-    },
-  ],
 });
 
 const User = mongoose.model("User", userSchema);

@@ -462,6 +462,7 @@ const getAllProducts = async (req, res) => {
     res.status(400).send(error.message);
   }
 };
+
 const getAllProductWithPrice = async (req, res) => {
   try {
     // Get all products
@@ -521,6 +522,7 @@ res.json(variations)
     res.status(500).json({message:"error getting variations"})
   }
 }
+
 const addCategory = async (req, res) => {
   try {
     const { name } = req.body;
@@ -535,6 +537,7 @@ const addCategory = async (req, res) => {
   }
 };
 
+
 const getAllCategories = async (req, res) => {
   //get products
   try {
@@ -544,6 +547,8 @@ const getAllCategories = async (req, res) => {
     res.status(400).send(error.message);
   }
 };
+
+
 const deleteCategory = async (req, res) => {
   //delete product
   try {
@@ -556,6 +561,7 @@ const deleteCategory = async (req, res) => {
     res.status(400).json({ error: error.message });
   }
 };
+
 
 const updateCategory = async (req, res) => {
   //update product
@@ -572,6 +578,227 @@ const updateCategory = async (req, res) => {
     res.status(201).json({ category });
   } catch (error) {
     res.status(400).json({ error: error.message });
+  }
+};
+
+const getProductByCategory = async (req,res)=>{
+  try {
+    const {categoryId} = req.params;
+    const products = await Product.find({categoryId:categoryId});
+    if(!products){
+      res.status(404).json({message:"No Product found"});
+
+    }
+    res.status(200).json(products)
+
+  } catch (error) {
+    res.status(500).json({ message: "Internal Server Error" })
+  }
+}
+
+const getProductByVendor = async (req,res)=>{
+  try {
+    const {vendorId} = req.params;
+    const products = await Product.find({vendorId:vendorId});
+    if(!products){
+      res.status(404).json({message:"No Product found"});
+    }
+    res.status(200).json(products)
+  }catch(error){
+    res.status(500).json({ message: "Internal Server Error" })
+  }
+}
+
+const getProductByPriceRange = async (req, res) => {
+  try {
+    const { startPrice, endPrice } = req.params;
+
+    // Check if startPrice and endPrice are valid numbers
+    if (isNaN(startPrice) || isNaN(endPrice)) {
+      return res.status(400).json({ message: "Invalid price range values" });
+    }
+
+    // Find products with variations within the specified price range
+    const products = await Product.aggregate([
+      {
+        $lookup: {
+          from: "variations", // The name of the Variation collection
+          localField: "_id",
+          foreignField: "productId",
+          as: "variations",
+        },
+      },
+      {
+        $unwind: "$variations",
+      },
+      {
+        $match: {
+          "variations.price": {
+            $gte: parseFloat(startPrice),
+            $lte: parseFloat(endPrice),
+          },
+        },
+      },
+      {
+        $group: {
+          _id: "$_id",
+          name: { $first: "$name" },
+          // Add other fields from the Product model as needed
+        },
+      },
+    ]);
+
+    if (!products || products.length === 0) {
+      return res.status(404).json({ message: "No products found within the price range" });
+    }
+
+    res.status(200).json(products);
+  } catch (error) {
+    console.error("Error getting products by price range:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+const getProductBySize = async (req, res) => {
+  try {
+    const { size } = req.params;
+
+    // Find products with variations within the specified size
+    const products = await Product.aggregate([
+      {
+        $lookup: {
+          from: "variations", // The name of the Variation collection
+          localField: "_id",
+          foreignField: "productId",
+          as: "variations",
+        },
+      },
+      {
+        $unwind: "$variations",
+      },
+      {
+        $match: {
+          "variations.size": size,
+        },
+      },
+      {
+        $group: {
+          _id: "$_id",
+          name: { $first: "$name" },
+          // Add other fields from the Product model as needed
+        },
+      },
+    ]);
+
+    if (!products || products.length === 0) {
+      return res.status(404).json({ message: "No products found within the size" });
+    }
+
+    res.status(200).json(products);
+  } catch (error) {
+    console.error("Error getting products by size:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+}
+
+const getProductByColor = async (req, res) => {
+  try {
+    const { color } = req.params;
+    const products = await Product.aggregate([
+      {
+        $lookup: {
+          from: "variations", // The name of the Variation collection
+          localField: "_id",
+          foreignField: "productId",
+          as: "variations",
+        },
+      },
+      {
+        $unwind: "$variations",
+      },
+      {
+        $match: {
+          "variations.color": color,
+        },
+      },
+      {
+        $group: {
+          _id: "$_id",
+          name: { $first: "$name" },
+          // Add other fields from the Product model as needed
+        },
+      },
+    ]);
+
+    if (!products || products.length === 0) {
+      return res.status(404).json({ message: "No products found within the size" });
+    }
+
+    res.status(200).json(products);
+  } catch (error) {
+    console.error("Error getting products by size:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+}
+
+const filterProducts = async (req, res) => {
+  try {
+    const { category, vendor, startPrice, endPrice, size, color } = req.query;
+    let filter = {};
+
+    // Apply filters based on provided parameters
+    if (category) {
+      filter.categoryId = category;
+    }
+    if (vendor) {
+      filter.vendorId = vendor;
+    }
+    if (startPrice !== undefined && endPrice !== undefined) {
+      filter = {
+        ...filter,
+        $expr: {
+          $gte: ['$variations.price', parseFloat(startPrice)],
+          $lte: ['$variations.price', parseFloat(endPrice)],
+        },
+      };
+    }
+    if (size) {
+      filter['variations.size'] = size;
+    }
+    if (color) {
+      filter['variations.color'] = color;
+    }
+
+    // Aggregate products based on the applied filters
+    const products = await Product.aggregate([
+      {
+        $lookup: {
+          from: "variations", // The name of the Variation collection
+          localField: "_id",
+          foreignField: "productId",
+          as: "variations",
+        },
+      },
+      {
+        $match: filter,
+      },
+      {
+        $group: {
+          _id: "$_id",
+          name: { $first: "$name" },
+          // Add other fields from the Product model as needed
+        },
+      },
+    ]);
+
+    if (!products || products.length === 0) {
+      return res.status(404).json({ message: "No products found matching the criteria" });
+    }
+
+    res.status(200).json(products);
+  } catch (error) {
+    console.error("Error filtering products:", error);
+    res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
@@ -592,5 +819,12 @@ module.exports = {
   deleteCategory,
   updateCategory,
   getProductWithVariation,
-  getAllProductWithPrice
+  getAllProductWithPrice,
+  getProductByCategory,
+  getProductByVendor,
+  getProductByPriceRange,
+  getProductBySize,
+  getProductByColor,
+  filterProducts,
+
 };

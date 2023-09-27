@@ -58,5 +58,15 @@ router.post(
 );
 router.delete("/delete-account", auth, UserController.deleteAccount);
 
+router.get("/cart", auth, UserController.getCart);
+router.post("/add-to-cart", auth, UserController.addToCart);
+router.post("/remove-cart-item", auth, UserController.removeCartItem);
+router.post("/update-cart-item", auth, UserController.updateCartItem);
+router.post("/clear-cart", auth, UserController.emptyCart);
 
+router.post("/shipping-address",auth,UserController.addShippingAddress)
+
+router.put('/update-shipping-address',auth, UserController.updateShippingAddress);
+router.get("/shipping-address",auth,UserController.getShippingAddress);
+router.delete("/shipping-address/:id",auth,UserController.deleteShippingAddress);
 module.exports = router;

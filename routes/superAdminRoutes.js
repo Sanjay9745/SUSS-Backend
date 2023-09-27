@@ -4,6 +4,7 @@ const AdminController = require("../controllers/adminController");
 const { check } = require("express-validator");
 const auth = require("../middleware/superAdminAuth");
 // Route for superadmin registration
+
 router.post(
   "/register",
   [
@@ -33,6 +34,7 @@ router.get("/protected", auth, (req, res) => {
     res.status(200).json({ message: "Protected route" });
     }
 );
+
 router.get('/get-all-users', auth, AdminController.getAllUsers)
 router.post('/add-user', auth, AdminController.addUser)
 router.post('/update-user', auth, AdminController.updateUser)

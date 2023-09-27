@@ -17,6 +17,16 @@ router.get("/get-product-from-slug", ProductController.getProductFromSlug);
 router.get("/get-product-with-variation/:productId", ProductController.getProductWithVariation);
 router.get("/get-products-of-vendor",vendorAuth,ProductController.getProductOfVendor)
 router.get("/get-products", ProductController.getAllProductWithPrice);
+router.get("/get-product-by-category/:categoryId", ProductController.getProductByCategory);
+router.get("/get-product-by-vendor/:vendorId", ProductController.getProductByVendor);
+//get by price range
+router.get("/get-by-price-range/:startPrice/:endPrice", ProductController.getProductByPriceRange);
+//get product by size
+router.get("/get-by-size/:size", ProductController.getProductBySize);
+//get by color
+router.get("/get-by-color/:color", ProductController.getProductByColor);
+//get filtered product
+router.get("/filtered-products/", ProductController.filterProducts);
 
 router.patch("/update/:id",productImage,vendorAuth, ProductController.updateProduct);
 router.patch("/update-variation",productImage, vendorAuth, ProductController.updateVariation);

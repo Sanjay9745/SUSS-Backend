@@ -16,6 +16,11 @@ const {
   DeleteUser,
 } = require("../helpers/userHelper"); // Import userHelper
 
+const Cart = require("../models/Cart");
+const Product = require("../models/Product");
+const Variation = require("../models/Variation");
+const ShippingAddress = require("../models/ShippingAddress");
+
 const jwtSecretKey = process.env.JWT_SECRET_KEY;
 
 // Register a new user
@@ -37,7 +42,7 @@ const registerUser = async (req, res) => {
     }
 
     // Create a new user and save to the database using the helper function
-    const newUser = await createUser(name, email, password,'user');
+    const newUser = await createUser(name, email, password, "user");
 
     // Create and return a JWT token for the registered user
     const token = jwt.sign({ userId: newUser._id }, jwtSecretKey, {
@@ -146,10 +151,10 @@ const verifyOtp = async (req, res) => {
 
     if (result.user) {
       // User was found and OTP was successfully verified
-      res.redirect(`${process.env.DOMAIN}/profile`)
+      res.redirect(`${process.env.DOMAIN}/profile`);
     } else if (result.message === "User is already verified") {
       // User is already verified
-      res.redirect(`${process.env.DOMAIN}/profile`)
+      res.redirect(`${process.env.DOMAIN}/profile`);
     } else {
       // Invalid OTP
       res.status(400).json({ message: "Invalid OTP" });
@@ -189,7 +194,7 @@ const updateProfile = async (req, res) => {
     }
 
     const userId = req.user.userId; // Get the userId from the request object
-    const { name} = req.body;
+    const { name } = req.body;
     const data = { name };
     const result = await updateUserProfile(userId, data);
     if (!result.user) {
@@ -236,7 +241,7 @@ const updatePassword = async (req, res) => {
     console.error("Error updating password:", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
-}
+};
 const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
@@ -248,7 +253,7 @@ const forgotPassword = async (req, res) => {
     user.passwordResetToken = code;
     await user.save();
     const emailResult = await sendMail(
-     user.email,
+      user.email,
       "Reset Password",
       `Reset Your Password`,
       `
@@ -275,7 +280,7 @@ const forgotPassword = async (req, res) => {
     console.error("Error sending OTP:", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
-}
+};
 
 const resetPassword = async (req, res) => {
   try {
@@ -287,43 +292,43 @@ const resetPassword = async (req, res) => {
     if (!code || !uid) {
       return res.status(400).json({ message: "OTP and userId are required" });
     }
-    if(!newPassword){
+    if (!newPassword) {
       return res.status(400).json({ message: "New password is required" });
     }
 
-      const user = await findUserById(uid);
-      if(!user){
-        return res.status(400).json({ message: "User not found" });
-      }
-      if(user.passwordResetToken !== code){
-        return res.status(400).json({ message: "Invalid code" });
-      }
-      if(user.passwordResetToken === code){
-        user.passwordResetToken = null;
-      }
-  
+    const user = await findUserById(uid);
+    if (!user) {
+      return res.status(400).json({ message: "User not found" });
+    }
+    if (user.passwordResetToken !== code) {
+      return res.status(400).json({ message: "Invalid code" });
+    }
+    if (user.passwordResetToken === code) {
+      user.passwordResetToken = null;
+    }
+
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-   user.password = hashedPassword;
+    user.password = hashedPassword;
     await user.save();
     res.status(200).json({ message: "Password updated successfully" });
   } catch (error) {
     console.error("Error resetting password:", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
-}
+};
 
 const deleteAccount = async (req, res) => {
   try {
     const userId = req.user.userId; // Get the userId from the request object
-    
-     await DeleteUser(userId); // Call the helper function
+
+    await DeleteUser(userId); // Call the helper function
 
     res.status(200).json({ message: "Account deleted successfully" });
   } catch (error) {
     console.error("Error deleting account:", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
-}
+};
 
 const registerSuperAdmin = async (req, res) => {
   try {
@@ -346,7 +351,7 @@ const registerSuperAdmin = async (req, res) => {
     console.error("Error registering superadmin:", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
-}
+};
 
 const loginSuperAdmin = async (req, res) => {
   try {
@@ -360,7 +365,7 @@ const loginSuperAdmin = async (req, res) => {
     if (!user) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
-    if(user.userType !== "admin"){
+    if (user.userType !== "admin") {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
@@ -376,55 +381,345 @@ const loginSuperAdmin = async (req, res) => {
     console.error("Error logging in superadmin:", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
-}
+};
 
-const addCart = async (req, res) => {
+const addToCart = async (req, res) => {
   try {
     const userId = req.user.userId; // Get the userId from the request object
-    const { productId, variationId } = req.body;
+    const { productId, variationId, count, price } = req.body;
+
+    // Check if any of the required values are missing
+    if (!productId || !variationId || !count || !price) {
+      return res
+        .status(400)
+        .json({ message: "Invalid request. Missing required fields." });
+    }
+
+    // Check if the user exists
     const user = await findUserById(userId);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    const cart = user.cart;
-    const product = cart.find((item) => item.productId === productId);
-    if (product) {
-      return res.status(400).json({ message: "Product already added" });
-    }
-    cart.push({ productId, variationId });
-    user.cart = cart;
-    await user.save();
-    res.status(200).json({ message: "Product added to cart" });
 
-    
+    // Find the user's cart or create a new one if it doesn't exist
+    let cart = await Cart.findOne({ userId: userId });
+    if (!cart) {
+      cart = new Cart({
+        userId: userId,
+        products: [],
+      });
+    }
+
+    // Check if the product already exists in the cart, and update it or add a new entry
+    const existingProductIndex = cart.products.findIndex((product) => {
+      return (
+        product.productId === productId && product.variationId === variationId
+      );
+    });
+
+    if (existingProductIndex !== -1) {
+      // Product already exists in the cart, update the quantity and price
+      cart.products[existingProductIndex].count += count;
+      cart.products[existingProductIndex].price = price;
+    } else {
+      // Product doesn't exist in the cart, add a new entry
+      cart.products.push({
+        productId: productId,
+        variationId: variationId,
+        count: count,
+        price: price,
+      });
+    }
+
+    // Save the cart
+    await cart.save();
+
+    res.status(200).json({ message: "Product added to cart successfully" });
   } catch (error) {
     console.error("Error adding to cart:", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
-}
-const removeCart = async (req, res) => {
+};
+const removeCartItem = async (req, res) => {
   try {
     const userId = req.user.userId; // Get the userId from the request object
-    const { productId } = req.body;
+    const { variationId } = req.body; // Get the variationId from the request body
+
+    // Check if the user exists
     const user = await findUserById(userId);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    const cart = user.cart;
-    const product = cart.find((item) => item.productId === productId);
-    if (!product) {
-      return res.status(400).json({ message: "Product not found" });
+
+    // Find the user's cart
+    const cart = await Cart.findOne({ userId: userId });
+    if (!cart) {
+      return res.status(404).json({ message: "Cart not found for the user" });
     }
-    const newCart = cart.filter((item) => item.productId !== productId);
-    user.cart = newCart;
-    await user.save();
-    res.status(200).json({ message: "Product removed from cart" });
-  }
-  catch (error) {
+
+    // Find the index of the product with matching variationId in the cart
+    const productIndex = cart.products.findIndex((product) => {
+      return product.variationId === variationId;
+    });
+
+    if (productIndex !== -1) {
+      // Remove the product from the cart
+      cart.products.splice(productIndex, 1);
+
+      // Save the updated cart
+      await cart.save();
+
+      return res
+        .status(200)
+        .json({ message: "Product removed from cart successfully" });
+    } else {
+      return res
+        .status(404)
+        .json({
+          message:
+            "Product with the specified variationId not found in the cart",
+        });
+    }
+  } catch (error) {
     console.error("Error removing from cart:", error);
     res.status(500).json({ message: "Internal Server Error" });
-  } 
+  }
+};
+
+const getCart = async (req, res) => {
+  try {
+    const userId = req.user.userId; // Get the userId from the request object
+    const cart = await Cart.findOne({ userId: userId });
+    if (!cart) {
+      return res.status(404).json({ message: "Cart not found for the user" });
+    }
+
+    // Fetch full product and variation details for each item in the cart
+    const newCart = await Promise.all(cart.products.map(async (product) => {
+      const productData = await Product.findOne({ _id: product.productId });
+      const variationData = await Variation.findOne({ _id: product.variationId });
+
+      // Construct a new object with complete product and variation details
+      return {
+        product: productData.toObject(), // Full product details
+        variation: variationData.toObject(), // Full variation details
+        count: product.count, // Include other cart item properties like count
+      };
+    }));
+
+    res.status(200).json(newCart);
+  } catch (error) {
+    console.error("Error getting cart:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+const updateCartItem = async (req, res) => {
+  try {
+    const { variationId, count, price } = req.body;
+
+    // Check if the user's cart exists
+    const cart = await Cart.findOne({ userId: req.user.userId });
+    if (!cart) {
+      return res.status(404).json({ message: "Cart not found for the user" });
+    }
+
+    // Find the item in the cart based on the variationId
+    const itemToUpdate = cart.products.find((product) => product.variationId === variationId);
+
+    if (!itemToUpdate) {
+      return res.status(404).json({ message: "Item not found in the cart" });
+    }
+
+    // Update the count and price of the item if provided, otherwise keep the previous values
+    if (count !== undefined) {
+      itemToUpdate.count = count;
+    }
+
+    if (price !== undefined) {
+      itemToUpdate.price = price;
+    }
+
+    // Save the updated cart
+    await cart.save();
+
+    res.status(200).json({ message: "Cart updated successfully" });
+  } catch (error) {
+    console.error("Error updating cart:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+const emptyCart = async (req, res) => {
+  try {
+    // Check if the user's cart exists
+    const cart = await Cart.findOne({ userId: req.user.userId });
+    if (!cart) {
+      return res.status(404).json({ message: "Cart not found for the user" });
+    }
+
+    // Clear all items from the cart
+    cart.products = [];
+
+    // Save the updated cart
+    await cart.save();
+
+    res.status(200).json({ message: "Cart emptied successfully" });
+  } catch (error) {
+    console.error("Error emptying cart:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+const addShippingAddress = async (req, res) => {
+  try {
+    const userId = req.user.userId; // Get the userId from the request object
+    const {
+      first_name,
+      last_name,
+      street_address,
+      city,
+      state,
+      postal_code,
+      country,
+      phone,
+      company_name,
+      apartment,
+      delivery_instruction,
+    } = req.body;
+
+    // Check if the user exists
+    const user = await findUserById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Create a new shipping address document
+    const shippingAddress = new ShippingAddress({
+      first_name,
+      last_name,
+      street_address,
+      city,
+      state,
+      postal_code,
+      country,
+      phone,
+      company_name,
+      apartment,
+      delivery_instruction,
+      user_id: userId,
+    });
+
+    // Save the shipping address to the database
+    await shippingAddress.save();
+
+    res.status(200).json({ message: "Shipping address added successfully" });
+  } catch (error) {
+    console.error("Error adding shipping address:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+const updateShippingAddress = async (req, res) => {
+  try {
+    const userId = req.user.userId; // Get the userId from the request object
+    const {
+      first_name,
+      last_name,
+      street_address,
+      city,
+      state,
+      postal_code,
+      country,
+      phone,
+      company_name,
+      apartment,
+      delivery_instruction,
+    } = req.body;
+
+    // Check if the user exists
+    const user = await findUserById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Find the user's existing shipping address
+    let shippingAddress = await ShippingAddress.findOne({ user_id: userId });
+
+    // If the shipping address doesn't exist, create a new one
+    if (!shippingAddress) {
+      shippingAddress = new ShippingAddress({
+        first_name,
+        last_name,
+        street_address,
+        city,
+        state,
+        postal_code,
+        country,
+        phone,
+        company_name,
+        apartment,
+        delivery_instruction,
+        user_id: userId,
+      });
+    } else {
+      // Update specific fields if they exist in the request body
+      if (first_name) {
+        shippingAddress.first_name = first_name;
+      }
+      if (last_name) {
+        shippingAddress.last_name = last_name;
+      }
+      if (street_address) {
+        shippingAddress.street_address = street_address;
+      }
+      // Add more fields as needed
+
+      // Save the updated shipping address
+      await shippingAddress.save();
+    }
+
+    res.status(200).json({ message: "Shipping address updated successfully" });
+  } catch (error) {
+    console.error("Error updating shipping address:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+const getShippingAddress = async (req, res) => {
+  try {
+    const userId = req.user.userId; // Get the userId from the request object
+
+    // Find the user's shipping address
+    const shippingAddress = await ShippingAddress.findOne({ user_id: userId });
+
+    if (!shippingAddress) {
+      return res.status(404).json({ message: "Shipping address not found" });
+    }
+
+    res.status(200).json(shippingAddress);
+  } catch (error) {
+    console.error("Error getting shipping address:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
 }
+const deleteShippingAddress = async (req, res) => {
+  try {
+    const userId = req.user.userId; // Get the userId from the request object
+    const {id} = req.params;
+
+    // Find and delete the user's shipping address
+    const deletedShippingAddress = await ShippingAddress.findOneAndDelete({ user_id: userId,_id:id });
+
+    if (!deletedShippingAddress) {
+      return res.status(404).json({ message: "Shipping address not found" });
+    }
+
+    res.status(200).json({ message: "Shipping address deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting shipping address:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+
 module.exports = {
   registerUser,
   loginUser,
@@ -437,5 +732,15 @@ module.exports = {
   resetPassword,
   deleteAccount,
   registerSuperAdmin,
-  loginSuperAdmin
+  loginSuperAdmin,
+  addToCart,
+  removeCartItem,
+  getCart,
+  updateCartItem,
+  emptyCart,
+  addShippingAddress,
+  updateShippingAddress,
+  getShippingAddress,
+  deleteShippingAddress
+
 };
