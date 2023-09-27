@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema({
   name: {
@@ -33,11 +33,17 @@ const userSchema = new mongoose.Schema({
   },
   userType: {
     type: String,
-    enum: ['user', 'vendor','admin'],
-    default: 'user', // Set a default value if needed
-  }
+    enum: ["user", "vendor", "admin"],
+    default: "user", // Set a default value if needed
+  },
+  cart: [
+    {
+      productId: { type: String },
+      variationId: { type: String },
+    },
+  ],
 });
 
-const User = mongoose.model('User', userSchema);
+const User = mongoose.model("User", userSchema);
 
 module.exports = User;

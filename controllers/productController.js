@@ -462,6 +462,34 @@ const getAllProducts = async (req, res) => {
     res.status(400).send(error.message);
   }
 };
+const getAllProductWithPrice = async (req, res) => {
+  try {
+    // Get all products
+    const products = await Product.find();
+
+    // Iterate through each product and add the lowest variation price
+    for (const product of products) {
+      const variations = await Variation.find({ productId: product._id });
+
+      // Find the variation with the lowest price
+      let lowestPrice = Infinity;
+      for (const variation of variations) {
+        if (variation.price < lowestPrice) {
+          lowestPrice = variation.price;
+        }
+      }
+
+      // Add the lowest price to the product
+      product.price = lowestPrice;
+    }
+
+    // Send the products with lowest prices as a response
+    res.json(products);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Internal server error' });
+  }
+};
 
 const getProductById = async (req, res) => {
   //get product by id
@@ -553,5 +581,6 @@ module.exports = {
   getAllCategories,
   deleteCategory,
   updateCategory,
-  getProductWithVariation
+  getProductWithVariation,
+  getAllProductWithPrice
 };

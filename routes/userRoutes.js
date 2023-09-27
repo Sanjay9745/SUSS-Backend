@@ -58,5 +58,5 @@ router.post(
 );
 router.delete("/delete-account", auth, UserController.deleteAccount);
 
-
+router.post('/add-cart',auth,UserController.addCart)
 module.exports = router;

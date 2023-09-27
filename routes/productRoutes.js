@@ -16,9 +16,12 @@ router.get("/get/:productId", ProductController.getProductById);
 router.get("/get-product-from-slug", ProductController.getProductFromSlug);
 router.get("/get-product-with-variation/:productId", ProductController.getProductWithVariation);
 router.get("/get-products-of-vendor",vendorAuth,ProductController.getProductOfVendor)
+router.get("/get-products", ProductController.getAllProductWithPrice);
+
 router.patch("/update/:id",productImage,vendorAuth, ProductController.updateProduct);
 router.patch("/update-variation",productImage, vendorAuth, ProductController.updateVariation);
 router.patch("/update-category/:categoryId",superAdminAuth, ProductController.updateCategory);
+
 
 
 router.delete("/delete/:productId",vendorAuth, ProductController.deleteProduct);

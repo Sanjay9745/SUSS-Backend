@@ -378,7 +378,53 @@ const loginSuperAdmin = async (req, res) => {
   }
 }
 
+const addCart = async (req, res) => {
+  try {
+    const userId = req.user.userId; // Get the userId from the request object
+    const { productId, variationId } = req.body;
+    const user = await findUserById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    const cart = user.cart;
+    const product = cart.find((item) => item.productId === productId);
+    if (product) {
+      return res.status(400).json({ message: "Product already added" });
+    }
+    cart.push({ productId, variationId });
+    user.cart = cart;
+    await user.save();
+    res.status(200).json({ message: "Product added to cart" });
 
+    
+  } catch (error) {
+    console.error("Error adding to cart:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+}
+const removeCart = async (req, res) => {
+  try {
+    const userId = req.user.userId; // Get the userId from the request object
+    const { productId } = req.body;
+    const user = await findUserById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    const cart = user.cart;
+    const product = cart.find((item) => item.productId === productId);
+    if (!product) {
+      return res.status(400).json({ message: "Product not found" });
+    }
+    const newCart = cart.filter((item) => item.productId !== productId);
+    user.cart = newCart;
+    await user.save();
+    res.status(200).json({ message: "Product removed from cart" });
+  }
+  catch (error) {
+    console.error("Error removing from cart:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  } 
+}
 module.exports = {
   registerUser,
   loginUser,
