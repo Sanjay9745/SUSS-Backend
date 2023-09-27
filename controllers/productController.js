@@ -467,6 +467,9 @@ const getAllProductWithPrice = async (req, res) => {
     // Get all products
     const products = await Product.find();
 
+    // Create a new array of products with the "price" field
+    const productsWithPrice = [];
+
     // Iterate through each product and add the lowest variation price
     for (const product of products) {
       const variations = await Variation.find({ productId: product._id });
@@ -480,16 +483,23 @@ const getAllProductWithPrice = async (req, res) => {
       }
 
       // Add the lowest price to the product
-      product.price = lowestPrice;
+      const productWithPrice = {
+        ...product.toObject(),
+        price: lowestPrice, // Add the "price" field
+      };
+
+      // Add the product to the new array
+      productsWithPrice.push(productWithPrice);
     }
 
-    // Send the products with lowest prices as a response
-    res.json(products);
+    // Send the new array of products with lowest prices as a response
+    res.json(productsWithPrice);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Internal server error' });
   }
 };
+
 
 const getProductById = async (req, res) => {
   //get product by id
