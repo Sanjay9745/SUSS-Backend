@@ -633,6 +633,7 @@ const updateShippingAddress = async (req, res) => {
       company_name,
       apartment,
       delivery_instruction,
+      // Add more fields here as needed
     } = req.body;
 
     // Check if the user exists
@@ -671,6 +672,30 @@ const updateShippingAddress = async (req, res) => {
       if (street_address) {
         shippingAddress.street_address = street_address;
       }
+      if (city) {
+        shippingAddress.city = city;
+      }
+      if (state) {
+        shippingAddress.state = state;
+      }
+      if (postal_code) {
+        shippingAddress.postal_code = postal_code;
+      }
+      if (country) {
+        shippingAddress.country = country;
+      }
+      if (phone) {
+        shippingAddress.phone = phone;
+      }
+      if (company_name) {
+        shippingAddress.company_name = company_name;
+      }
+      if (apartment) {
+        shippingAddress.apartment = apartment;
+      }
+      if (delivery_instruction) {
+        shippingAddress.delivery_instruction = delivery_instruction;
+      }
       // Add more fields as needed
 
       // Save the updated shipping address
@@ -688,7 +713,7 @@ const getShippingAddress = async (req, res) => {
     const userId = req.user.userId; // Get the userId from the request object
 
     // Find the user's shipping address
-    const shippingAddress = await ShippingAddress.findOne({ user_id: userId });
+    const shippingAddress = await ShippingAddress.find({ user_id: userId }); // change to findOne if only one shipping address
 
     if (!shippingAddress) {
       return res.status(404).json({ message: "Shipping address not found" });

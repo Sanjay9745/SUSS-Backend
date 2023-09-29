@@ -7,6 +7,14 @@ const {
   unlinkUploadedFiles,
   deleteExistingImages,
   deleteVariationImages,
+  getLowestVariationPrice,
+  getVariationsByProductId,
+  getVendorByProductId,
+  getProductsByPriceRange,
+  getProductsBySize,
+  getProductsByColor,
+  getProductsByVendor,
+  getProductsByCategory,
 } = require("../helpers/productHelpers");
 
 const createProduct = async (req, res) => {
@@ -65,7 +73,7 @@ const createProduct = async (req, res) => {
       vendorId: vendor.vendorId,
       categoryId,
       images: imageObj,
-      slug:slug
+      slug: slug,
     });
 
     await product.save();
@@ -90,9 +98,7 @@ const updateProduct = async (req, res) => {
     const { name, slug, description, categoryId } = req.body;
     const existingProduct = await Product.findOne({ slug: slug });
     if (existingProduct && existingProduct.slug !== slug) {
-      
       return res.status(400).json({ message: "Slug already exists" });
-      
     }
 
     // Create an object to store the images with numbered keys
@@ -167,7 +173,10 @@ const deleteProduct = async (req, res) => {
     const { productId } = req.params;
 
     // Find the product by productId
-    const product = await Product.findOne({_id:productId,vendorId:req.vendor.vendorId})
+    const product = await Product.findOne({
+      _id: productId,
+      vendorId: req.vendor.vendorId,
+    });
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
@@ -203,14 +212,14 @@ const deleteProduct = async (req, res) => {
   }
 };
 
-const getProductFromSlug = async (req,res) =>{
+const getProductFromSlug = async (req, res) => {
   try {
     const product = await Product.findOne({ slug: req.params.slug });
     res.status(200).json(product);
   } catch (error) {
     res.status(400).json(error.message);
   }
-}
+};
 
 const getAllVariations = async (req, res) => {
   //get variations
@@ -273,6 +282,7 @@ const addVariation = async (req, res) => {
 
       try {
         // Extract the filename from the file path
+
         const filename = path.basename(file.path);
         const imagePath = "productImage/" + filename;
 
@@ -309,7 +319,7 @@ const addVariation = async (req, res) => {
       offer_start_date,
       offer_end_date,
       margin,
-      vendorId:vendor.vendorId
+      vendorId: vendor.vendorId,
     });
 
     await variation.save();
@@ -368,7 +378,10 @@ const updateVariation = async (req, res) => {
       }
     }
 
-    const variation = await Variation.findOne({ _id: variationId,vendorId:req.vendor.vendorId });
+    const variation = await Variation.findOne({
+      _id: variationId,
+      vendorId: req.vendor.vendorId,
+    });
 
     if (!variation) {
       return res.status(404).json({ message: "Variation not found" });
@@ -379,32 +392,35 @@ const updateVariation = async (req, res) => {
       await deleteExistingImages(variation.images);
     }
 
-// Update fields using ternary conditional with the current value if undefined
-variation.price = price !== undefined ? price : (variation.price || "");
-variation.stock = stock !== undefined ? stock : (variation.stock || "");
-variation.size = size !== undefined ? size : (variation.size || "");
-variation.color = color !== undefined ? color : (variation.color || "");
-variation.weight = weight !== undefined ? weight : (variation.weight || "");
-variation.dimension.x =
-  dimensionX !== undefined ? dimensionX : (variation.dimension.x || "");
-variation.dimension.y =
-  dimensionY !== undefined ? dimensionY : (variation.dimension.y || "");
-variation.dimension.z =
-  dimensionZ !== undefined ? dimensionZ : (variation.dimension.z || "");
+    // Update fields using ternary conditional with the current value if undefined
+    variation.price = price !== undefined ? price : variation.price || "";
+    variation.stock = stock !== undefined ? stock : variation.stock || "";
+    variation.size = size !== undefined ? size : variation.size || "";
+    variation.color = color !== undefined ? color : variation.color || "";
+    variation.weight = weight !== undefined ? weight : variation.weight || "";
+    variation.dimension.x =
+      dimensionX !== undefined ? dimensionX : variation.dimension.x || "";
+    variation.dimension.y =
+      dimensionY !== undefined ? dimensionY : variation.dimension.y || "";
+    variation.dimension.z =
+      dimensionZ !== undefined ? dimensionZ : variation.dimension.z || "";
 
-variation.offer_price =
-  offer_price !== undefined ? offer_price : (variation.offer_price || "");
-variation.offer_start_date =
-  offer_start_date !== undefined ? offer_start_date : (variation.offer_start_date || "");
-variation.offer_end_date =
-  offer_end_date !== undefined ? offer_end_date : (variation.offer_end_date || "");
-variation.margin = margin !== undefined ? margin : (variation.margin || "");
+    variation.offer_price =
+      offer_price !== undefined ? offer_price : variation.offer_price || "";
+    variation.offer_start_date =
+      offer_start_date !== undefined
+        ? offer_start_date
+        : variation.offer_start_date || "";
+    variation.offer_end_date =
+      offer_end_date !== undefined
+        ? offer_end_date
+        : variation.offer_end_date || "";
+    variation.margin = margin !== undefined ? margin : variation.margin || "";
 
-   // Create a new 'images' field with the updated image paths if imageObj is not empty
-if (Object.keys(imageObj).length > 0) {
-  variation.images = imageObj;
-}
-
+    // Create a new 'images' field with the updated image paths if imageObj is not empty
+    if (Object.keys(imageObj).length > 0) {
+      variation.images = imageObj;
+    }
 
     await variation.save();
     res.status(200).json({ variation });
@@ -412,13 +428,41 @@ if (Object.keys(imageObj).length > 0) {
     res.status(500).json({ error: error.message });
   }
 };
+const getSingleProductWithFullDetails = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const product = await Product.findOne({ _id: id });
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    // Use the getLowestVariationPrice helper function
+    const lowestPrice = await getLowestVariationPrice(id);
+    const variations = await getVariationsByProductId(id);
+    const vendorDetails = await getVendorByProductId(id);
+
+    const productWithPrice = {
+      ...product.toObject(),
+      price: lowestPrice, // Add the "price" field
+      variationsDetails: variations,
+      vendorDetails: vendorDetails,
+    };
+
+    res.status(200).json(productWithPrice);
+  } catch (error) {
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
 
 const deleteVariation = async (req, res) => {
   try {
     const { productId, variationId } = req.params;
-  
+
     // Find the product by productId
-    const product = await Product.findOne({_id:productId,vendorId:req.vendor.vendorId})
+    const product = await Product.findOne({
+      _id: productId,
+      vendorId: req.vendor.vendorId,
+    });
     if (!product) return res.status(400).json({ message: "Product not found" });
     // Find the variation by variationId
     const variation = await Variation.findById(variationId);
@@ -440,19 +484,18 @@ const deleteVariation = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
-const getProductOfVendor = async(req,res)=>{
+const getProductOfVendor = async (req, res) => {
   try {
     const vendor = req.vendor;
-    const products = await Product.find({vendorId:vendor.vendorId});
-    if(!products){
-      res.status(404).json({message:"No Product found"});
-
+    const products = await Product.find({ vendorId: vendor.vendorId });
+    if (!products) {
+      res.status(404).json({ message: "No Product found" });
     }
-    res.status(200).json(products)
+    res.status(200).json(products);
   } catch (error) {
     res.status(500).json({ message: "Internal Server Error" });
   }
-}
+};
 const getAllProducts = async (req, res) => {
   //get products
   try {
@@ -467,21 +510,12 @@ const getAllProductWithPrice = async (req, res) => {
   try {
     // Get all products
     const products = await Product.find();
-
     // Create a new array of products with the "price" field
     const productsWithPrice = [];
 
     // Iterate through each product and add the lowest variation price
     for (const product of products) {
-      const variations = await Variation.find({ productId: product._id });
-
-      // Find the variation with the lowest price
-      let lowestPrice = Infinity;
-      for (const variation of variations) {
-        if (variation.price < lowestPrice) {
-          lowestPrice = variation.price;
-        }
-      }
+      const lowestPrice = await getLowestVariationPrice(product._id);
 
       // Add the lowest price to the product
       const productWithPrice = {
@@ -497,10 +531,9 @@ const getAllProductWithPrice = async (req, res) => {
     res.json(productsWithPrice);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Internal server error' });
+    res.status(500).json({ message: "Internal server error" });
   }
 };
-
 
 const getProductById = async (req, res) => {
   //get product by id
@@ -512,16 +545,69 @@ const getProductById = async (req, res) => {
   }
 };
 const getProductWithVariation = async (req, res) => {
-  const {productId} = req.params;
+  const { productId } = req.params;
   //get product by id
   try {
-
-    const variations = await Variation.find({productId:productId});
-res.json(variations)
+    const variations = await Variation.find({ productId: productId });
+    res.json(variations);
   } catch (error) {
-    res.status(500).json({message:"error getting variations"})
+    res.status(500).json({ message: "error getting variations" });
   }
-}
+};
+const getProductsWithPagination = async (req, res) => {
+  try {
+    // Get query parameters for pagination
+    const page = parseInt(req.query.page) || 1; // Default to page 1
+    const limit = parseInt(req.query.limit) || 10; // Default to a limit of 10 products per page
+
+    // Calculate the starting index for the products on the current page
+    const startIndex = (page - 1) * limit;
+
+    // Get all products
+    const allProducts = await Product.find();
+
+    // Slice the products array based on the pagination parameters
+    const productsOnPage = allProducts.slice(startIndex, startIndex + limit);
+
+    // Create an array to store products with full details
+    const productsWithFullDetails = [];
+
+    for (const product of productsOnPage) {
+      const productId = product._id;
+
+      // Use the getLowestVariationPrice helper function to get the lowest price
+      const lowestPrice = await getLowestVariationPrice(productId);
+
+      // Use the getVariationsByProductId helper function to get variations details
+      const variations = await getVariationsByProductId(productId);
+
+      // Use the getVendorByProductId helper function to get vendor details
+      const vendorDetails = await getVendorByProductId(productId);
+
+      // Create a product object with full details
+      const productWithFullDetails = {
+        ...product.toObject(),
+        price: lowestPrice, // Add the "price" field
+        variationsDetails: variations,
+        vendorDetails: vendorDetails,
+      };
+
+      // Add the product to the array
+      productsWithFullDetails.push(productWithFullDetails);
+    }
+
+    // Send the array of products with full details as a response
+    res.status(200).json({
+      totalProducts: allProducts.length,
+      currentPage: page,
+      totalPages: Math.ceil(allProducts.length / limit),
+      products: productsWithFullDetails,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Internal server error" });
+  }
+};
 
 const addCategory = async (req, res) => {
   try {
@@ -537,7 +623,6 @@ const addCategory = async (req, res) => {
   }
 };
 
-
 const getAllCategories = async (req, res) => {
   //get products
   try {
@@ -547,7 +632,6 @@ const getAllCategories = async (req, res) => {
     res.status(400).send(error.message);
   }
 };
-
 
 const deleteCategory = async (req, res) => {
   //delete product
@@ -561,7 +645,6 @@ const deleteCategory = async (req, res) => {
     res.status(400).json({ error: error.message });
   }
 };
-
 
 const updateCategory = async (req, res) => {
   //update product
@@ -581,33 +664,31 @@ const updateCategory = async (req, res) => {
   }
 };
 
-const getProductByCategory = async (req,res)=>{
+const getProductByCategory = async (req, res) => {
   try {
-    const {categoryId} = req.params;
-    const products = await Product.find({categoryId:categoryId});
-    if(!products){
-      res.status(404).json({message:"No Product found"});
-
+    const { categoryId } = req.params;
+    const products = await Product.find({ categoryId: categoryId });
+    if (!products) {
+      res.status(404).json({ message: "No Product found" });
     }
-    res.status(200).json(products)
-
+    res.status(200).json(products);
   } catch (error) {
-    res.status(500).json({ message: "Internal Server Error" })
+    res.status(500).json({ message: "Internal Server Error" });
   }
-}
+};
 
-const getProductByVendor = async (req,res)=>{
+const getProductByVendor = async (req, res) => {
   try {
-    const {vendorId} = req.params;
-    const products = await Product.find({vendorId:vendorId});
-    if(!products){
-      res.status(404).json({message:"No Product found"});
+    const { vendorId } = req.params;
+    const products = await Product.find({ vendorId: vendorId });
+    if (!products) {
+      res.status(404).json({ message: "No Product found" });
     }
-    res.status(200).json(products)
-  }catch(error){
-    res.status(500).json({ message: "Internal Server Error" })
+    res.status(200).json(products);
+  } catch (error) {
+    res.status(500).json({ message: "Internal Server Error" });
   }
-}
+};
 
 const getProductByPriceRange = async (req, res) => {
   try {
@@ -618,41 +699,44 @@ const getProductByPriceRange = async (req, res) => {
       return res.status(400).json({ message: "Invalid price range values" });
     }
 
-    // Find products with variations within the specified price range
-    const products = await Product.aggregate([
-      {
-        $lookup: {
-          from: "variations", // The name of the Variation collection
-          localField: "_id",
-          foreignField: "productId",
-          as: "variations",
-        },
-      },
-      {
-        $unwind: "$variations",
-      },
-      {
-        $match: {
-          "variations.price": {
-            $gte: parseFloat(startPrice),
-            $lte: parseFloat(endPrice),
-          },
-        },
-      },
-      {
-        $group: {
-          _id: "$_id",
-          name: { $first: "$name" },
-          // Add other fields from the Product model as needed
-        },
-      },
-    ]);
+    // Find all products
+    const products = await Product.find();
 
     if (!products || products.length === 0) {
-      return res.status(404).json({ message: "No products found within the price range" });
+      return res
+        .status(404)
+        .json({ message: "No products found within the price range" });
     }
 
-    res.status(200).json(products);
+    // Iterate through each product and calculate the lowest variation price
+    const productsWithPrice = [];
+    for (const product of products) {
+      const variations = await Variation.find({ productId: product._id });
+
+      // Find the variation with the lowest price
+      let lowestPrice = Infinity;
+      for (const variation of variations) {
+        if (variation.price < lowestPrice) {
+          lowestPrice = variation.price;
+        }
+      }
+
+      // Add the lowest price to the product object
+      const productWithPrice = {
+        ...product.toObject(),
+        price: lowestPrice,
+      };
+
+      // Check if the product's price is within the specified range
+      if (
+        lowestPrice >= parseFloat(startPrice) &&
+        lowestPrice <= parseFloat(endPrice)
+      ) {
+        productsWithPrice.push(productWithPrice);
+      }
+    }
+
+    res.status(200).json(productsWithPrice);
   } catch (error) {
     console.error("Error getting products by price range:", error);
     res.status(500).json({ message: "Internal Server Error" });
@@ -663,136 +747,136 @@ const getProductBySize = async (req, res) => {
   try {
     const { size } = req.params;
 
-    // Find products with variations within the specified size
-    const products = await Product.aggregate([
-      {
-        $lookup: {
-          from: "variations", // The name of the Variation collection
-          localField: "_id",
-          foreignField: "productId",
-          as: "variations",
-        },
-      },
-      {
-        $unwind: "$variations",
-      },
-      {
-        $match: {
-          "variations.size": size,
-        },
-      },
-      {
-        $group: {
-          _id: "$_id",
-          name: { $first: "$name" },
-          // Add other fields from the Product model as needed
-        },
-      },
-    ]);
+    const variations = await Variation.find({ size });
+    const products = [];
 
-    if (!products || products.length === 0) {
-      return res.status(404).json({ message: "No products found within the size" });
-    }
+    // Use Promise.all to resolve all the async findOne calls
+    await Promise.all(
+      variations.map(async (variation) => {
+        const product = await Product.findOne({ _id: variation.productId });
+        if (product) {
+          const productWithDetails = {
+            name: product.name,
+            image: product.images, // Replace with the actual field name for images
+            vendorId: product.vendorId,
+            categoryId: product.categoryId,
+            description: product.description,
+            variationDetails: variation,
+          };
+          products.push(productWithDetails);
+        }
+      })
+    );
 
-    res.status(200).json(products);
+    res.json(products);
   } catch (error) {
     console.error("Error getting products by size:", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
-}
+};
 
 const getProductByColor = async (req, res) => {
   try {
     const { color } = req.params;
-    const products = await Product.aggregate([
-      {
-        $lookup: {
-          from: "variations", // The name of the Variation collection
-          localField: "_id",
-          foreignField: "productId",
-          as: "variations",
-        },
-      },
-      {
-        $unwind: "$variations",
-      },
-      {
-        $match: {
-          "variations.color": color,
-        },
-      },
-      {
-        $group: {
-          _id: "$_id",
-          name: { $first: "$name" },
-          // Add other fields from the Product model as needed
-        },
-      },
-    ]);
 
-    if (!products || products.length === 0) {
-      return res.status(404).json({ message: "No products found within the size" });
-    }
+    const variations = await Variation.find({ color });
+    const products = [];
 
-    res.status(200).json(products);
+    // Use Promise.all to resolve all the async findOne calls
+    await Promise.all(
+      variations.map(async (variation) => {
+        const product = await Product.findOne({ _id: variation.productId });
+        if (product) {
+          const productWithDetails = {
+            name: product.name,
+            image: product.images, // Replace with the actual field name for images
+            vendorId: product.vendorId,
+            categoryId: product.categoryId,
+            description: product.description,
+            color: variation.color,
+            variationDetails: variation,
+          };
+          products.push(productWithDetails);
+        }
+      })
+    );
+
+    res.json(products);
   } catch (error) {
-    console.error("Error getting products by size:", error);
+    console.error("Error getting products by size and color:", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
-}
+};
 
+// Main filter function
 const filterProducts = async (req, res) => {
   try {
-    const { category, vendor, startPrice, endPrice, size, color } = req.query;
-    let filter = {};
+    const { startPrice, endPrice, size, color, vendor, category, limit, page } =
+      req.query;
+
+    let products = [];
 
     // Apply filters based on provided parameters
-    if (category) {
-      filter.categoryId = category;
-    }
-    if (vendor) {
-      filter.vendorId = vendor;
-    }
-    if (startPrice !== undefined && endPrice !== undefined) {
-      filter = {
-        ...filter,
-        $expr: {
-          $gte: ['$variations.price', parseFloat(startPrice)],
-          $lte: ['$variations.price', parseFloat(endPrice)],
-        },
-      };
-    }
-    if (size) {
-      filter['variations.size'] = size;
-    }
-    if (color) {
-      filter['variations.color'] = color;
+    if (startPrice && endPrice) {
+      products = await getProductsByPriceRange(startPrice, endPrice);
+    } else if (size) {
+      products = await getProductsBySize(size);
+    } else if (color) {
+      products = await getProductsByColor(color);
+    } else if (vendor) {
+      products = await getProductsByVendor(vendor);
+    } else if (category) {
+      products = await getProductsByCategory(category);
+    } else {
+      // If no filters are provided, return all products
+      products = await Product.find();
     }
 
-    // Aggregate products based on the applied filters
-    const products = await Product.aggregate([
-      {
-        $lookup: {
-          from: "variations", // The name of the Variation collection
-          localField: "_id",
-          foreignField: "productId",
-          as: "variations",
-        },
-      },
-      {
-        $match: filter,
-      },
-      {
-        $group: {
-          _id: "$_id",
-          name: { $first: "$name" },
-          // Add other fields from the Product model as needed
-        },
-      },
-    ]);
+    // Sort products if needed
+    if (startPrice || endPrice) {
+      products.sort(
+        (a, b) => a.variationDetails.price - b.variationDetails.price
+      );
+    }
+    products = products.filter((product) => {
+      // Check startPrice and endPrice
+      if (
+        (startPrice && product.variationDetails.price < startPrice) ||
+        (endPrice && product.variationDetails.price > endPrice)
+      ) {
+        return false;
+      }
 
-    if (!products || products.length === 0) {
-      return res.status(404).json({ message: "No products found matching the criteria" });
+      // Check size
+      if (size && product.variationDetails.size !== size) {
+        return false;
+      }
+
+      // Check color
+      if (color && product.variationDetails.color !== color) {
+        return false;
+      }
+
+      // Check vendor
+      if (vendor && product.vendorId !== vendor) {
+        return false;
+      }
+
+      // Check category
+      if (category && product.categoryId !== category) {
+        return false;
+      }
+
+      // If all conditions pass, keep the product
+      return true;
+    });
+    // Paginate if needed
+    if (limit && page) {
+      const startIndex = (page - 1) * limit;
+      const endIndex = page * limit;
+      const paginatedProducts = products.slice(startIndex, endIndex);
+
+      return res.status(200).json(paginatedProducts);
     }
 
     res.status(200).json(products);
@@ -826,5 +910,6 @@ module.exports = {
   getProductBySize,
   getProductByColor,
   filterProducts,
-
+  getSingleProductWithFullDetails,
+  getProductsWithPagination,
 };
