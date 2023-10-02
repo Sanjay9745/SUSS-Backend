@@ -668,9 +668,17 @@ const getProductByCategory = async (req, res) => {
   try {
     const { categoryId } = req.params;
     const products = await Product.find({ categoryId: categoryId });
-    if (!products) {
-      res.status(404).json({ message: "No Product found" });
+
+    if (!products || products.length === 0) {
+      return res.status(404).json({ message: "No Product found" });
     }
+
+    // Add the 'lowestPrice' field to each product
+    for (const product of products) {
+      const lowestPrice = await getLowestPriceForProduct(product._id);
+      product.lowestPrice = lowestPrice;
+    }
+
     res.status(200).json(products);
   } catch (error) {
     res.status(500).json({ message: "Internal Server Error" });
@@ -681,9 +689,16 @@ const getProductByVendor = async (req, res) => {
   try {
     const { vendorId } = req.params;
     const products = await Product.find({ vendorId: vendorId });
+
+    // Iterate through each product and calculate the lowest variation price
+    for (const product of products) {
+      product.lowestPrice = await getLowestVariationPrice(product._id);
+    }
+
     if (!products) {
       res.status(404).json({ message: "No Product found" });
     }
+
     res.status(200).json(products);
   } catch (error) {
     res.status(500).json({ message: "Internal Server Error" });
@@ -762,6 +777,7 @@ const getProductBySize = async (req, res) => {
             categoryId: product.categoryId,
             description: product.description,
             variationDetails: variation,
+            price: variation.price,
           };
           products.push(productWithDetails);
         }
@@ -795,6 +811,7 @@ const getProductByColor = async (req, res) => {
             description: product.description,
             color: variation.color,
             variationDetails: variation,
+            price: variation.price,
           };
           products.push(productWithDetails);
         }
@@ -886,6 +903,113 @@ const filterProducts = async (req, res) => {
   }
 };
 
+//this is long filtering time complex is 0(n)
+const filter = async (req, res) => {
+  try {
+    const { startPrice, endPrice, size, color, vendor, category, limit, page } =
+      req.query;
+    const productsWithVariations = [];
+
+    // Use await to ensure products are fetched before proceeding
+    const products = await Product.find();
+
+    for (const product of products) {
+      if (product.variations && product.variations.length > 0) {
+        for (const variationId of product.variations) {
+          const variation = await Variation.findById(variationId);
+
+          // Create a productVariation object with default values
+          const productVariation = {
+            _id: product._id,
+            name: product.name,
+            description: product.description,
+            images: product.images || {},
+            price: null,
+            offer_price: null,
+            size: null,
+            color: null,
+            vendorId: product.vendorId,
+            category: product.categoryId,
+          };
+
+          if (variation) {
+            // If variation exists, update the productVariation properties
+            productVariation.variationImages = variation.images || "";
+            productVariation.price = variation.price || null;
+            productVariation.offer_price = variation.offer_price || null;
+            productVariation.size = variation.size || "";
+            productVariation.color = variation.color || "";
+          }
+
+          // Push the productVariation to the array
+          productsWithVariations.push(productVariation);
+        }
+      } else {
+        // If there are no variations, add the product itself
+        const productWithoutVariation = {
+          _id: product._id,
+          name: product.name,
+          description: product.description,
+          images: product.images || {},
+          price: null,
+          offer_price: null,
+          size: null,
+          color: null,
+          vendorId: product.vendorId,
+          category: product.categoryId,
+          variationImages: "", // Default value for variationImages when no variation
+        };
+
+        // Push the productWithoutVariation to the array
+        productsWithVariations.push(productWithoutVariation);
+      }
+    }
+
+    // Initialize filteredProducts with all productsWithVariations
+    let filteredProducts = [...productsWithVariations];
+
+    if (startPrice && endPrice) {
+      filteredProducts = filteredProducts.filter((product) =>
+        product.price >= startPrice && product.price <= endPrice
+      );
+    }
+    if (size) {
+      filteredProducts = filteredProducts.filter(
+        (product) => product.size === size
+      );
+    }
+    if (color) {
+      filteredProducts = filteredProducts.filter(
+        (product) => product.color === color
+      );
+    }
+    if (vendor) {
+      filteredProducts = filteredProducts.filter(
+        (product) => product.vendorId === vendor
+      );
+    }
+    if (category) {
+      filteredProducts = filteredProducts.filter(
+        (product) => product.category === category
+      );
+    }
+
+    if (limit && page) {
+      const startIndex = (page - 1) * limit;
+      const endIndex = page * limit;
+      const paginatedProducts = filteredProducts.slice(startIndex, endIndex);
+      return res.status(200).json(paginatedProducts);
+    } else {
+      return res.status(200).json(filteredProducts);
+    }
+  } catch (error) {
+    console.error("Error filtering products:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+
+
 module.exports = {
   getAllVariations,
   addVariation,
@@ -912,4 +1036,5 @@ module.exports = {
   filterProducts,
   getSingleProductWithFullDetails,
   getProductsWithPagination,
+  filter,
 };
