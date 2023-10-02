@@ -69,4 +69,11 @@ router.post("/shipping-address",auth,UserController.addShippingAddress)
 router.post('/update-shipping-address',auth, UserController.updateShippingAddress);
 router.get("/shipping-address",auth,UserController.getShippingAddress);
 router.delete("/shipping-address/:id",auth,UserController.deleteShippingAddress);
+
+// Define the billing address routes
+router.post("/billing-address", auth, UserController.addBillingAddress);
+router.post("/update-billing-address", auth, UserController.updateBillingAddress);
+router.get("/billing-address", auth, UserController.getBillingAddress);
+router.delete("/billing-address/:id", auth, UserController.deleteBillingAddress);
+
 module.exports = router;

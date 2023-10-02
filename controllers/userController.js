@@ -20,7 +20,7 @@ const Cart = require("../models/Cart");
 const Product = require("../models/Product");
 const Variation = require("../models/Variation");
 const ShippingAddress = require("../models/ShippingAddress");
-
+const BillingDetails = require("../models/BIllingDetails")
 const jwtSecretKey = process.env.JWT_SECRET_KEY;
 
 // Register a new user
@@ -743,6 +743,136 @@ const deleteShippingAddress = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
+// Import necessary modules and your BillingDetails model
+
+
+// Controller for adding a billing address
+const addBillingAddress = async (req, res) => {
+  try {
+    const userId = req.user.userId; // Get the userId from the request object
+    const {
+      first_name,
+      last_name,
+      street_address,
+      city,
+      state,
+      postal_code,
+      country,
+      phone,
+      company_name,
+      apartment,
+    } = req.body;
+
+    // Create a new billing address document
+    const billingAddress = new BillingDetails({
+      first_name,
+      last_name,
+      street_address,
+      city,
+      state,
+      postal_code,
+      country,
+      phone,
+      company_name,
+      apartment,
+      user_id: userId,
+    });
+
+    // Save the billing address to the database
+    await billingAddress.save();
+
+    res.status(200).json({ message: "Billing address added successfully" });
+  } catch (error) {
+    console.error("Error adding billing address:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+// Controller for updating a billing address
+const updateBillingAddress = async (req, res) => {
+  try {
+    const userId = req.user.userId; // Get the userId from the request object
+    const {
+      first_name,
+      last_name,
+      street_address,
+      city,
+      state,
+      postal_code,
+      country,
+      phone,
+      company_name,
+      apartment,
+    } = req.body;
+
+    // Find and update the user's billing address
+    await BillingDetails.updateOne(
+      { user_id: userId },
+      {
+        $set: {
+          first_name,
+          last_name,
+          street_address,
+          city,
+          state,
+          postal_code,
+          country,
+          phone,
+          company_name,
+          apartment,
+        },
+      }
+    );
+
+    res.status(200).json({ message: "Billing address updated successfully" });
+  } catch (error) {
+    console.error("Error updating billing address:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+// Controller for getting a billing address
+const getBillingAddress = async (req, res) => {
+  try {
+    const userId = req.user.userId; // Get the userId from the request object
+
+    // Find the user's billing address
+    const billingAddress = await BillingDetails.findOne({ user_id: userId });
+
+    if (!billingAddress) {
+      return res.status(404).json({ message: "Billing address not found" });
+    }
+
+    res.status(200).json(billingAddress);
+  } catch (error) {
+    console.error("Error getting billing address:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+// Controller for deleting a billing address
+const deleteBillingAddress = async (req, res) => {
+  try {
+    const userId = req.user.userId; // Get the userId from the request object
+
+    // Find and delete the user's billing address
+    const deletedBillingAddress = await BillingDetails.findOneAndDelete({
+      user_id: userId,
+    });
+
+    if (!deletedBillingAddress) {
+      return res
+        .status(404)
+        .json({ message: "Billing address not found" });
+    }
+
+    res.status(200).json({ message: "Billing address deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting billing address:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
 
 
 module.exports = {
@@ -766,6 +896,10 @@ module.exports = {
   addShippingAddress,
   updateShippingAddress,
   getShippingAddress,
-  deleteShippingAddress
+  deleteShippingAddress,
+  addBillingAddress,
+  updateBillingAddress,
+  getBillingAddress,
+  deleteBillingAddress,
 
 };
