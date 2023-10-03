@@ -993,11 +993,13 @@ const filter = async (req, res) => {
         (product) => product.category === category
       );
     }
+
     if(productId){
       filteredProducts = filteredProducts.filter(
-        (product) => product._id === productId
+        (product) => product._id.toString() === productId
       );
     }
+ 
     if (limit && page) {
       const startIndex = (page - 1) * limit;
       const endIndex = page * limit;
