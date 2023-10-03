@@ -970,6 +970,23 @@ const deleteFromWatchlist = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
+const getWatchlist = async (req, res) => {
+  try {
+    const userId = req.user.userId; // Get the userId from the request object
+
+    // Find the user's watchlist
+    const watchlist = await WatchList.findOne({ userId: userId });
+
+    if (!watchlist) {
+      return res.status(404).json({ message: "Watchlist not found" });
+    }
+
+    res.status(200).json({ watchlist });
+  } catch (error) {
+    console.error("Error getting watchlist:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
 
 
 module.exports = {
@@ -999,5 +1016,6 @@ module.exports = {
   getBillingAddress,
   deleteBillingAddress,
   addToWatchlist,
-  deleteFromWatchlist
+  deleteFromWatchlist,
+  getWatchlist
 };

@@ -906,7 +906,7 @@ const filterProducts = async (req, res) => {
 //this is long filtering time complex is 0(n)
 const filter = async (req, res) => {
   try {
-    const { startPrice, endPrice, size, color, vendor, category, limit, page } =
+    const { startPrice, endPrice, size, color, vendor, category, limit, page,productId } =
       req.query;
     const productsWithVariations = [];
 
@@ -993,7 +993,11 @@ const filter = async (req, res) => {
         (product) => product.category === category
       );
     }
-
+    if(productId){
+      filteredProducts = filteredProducts.filter(
+        (product) => product._id === productId
+      );
+    }
     if (limit && page) {
       const startIndex = (page - 1) * limit;
       const endIndex = page * limit;
