@@ -20,7 +20,8 @@ const Cart = require("../models/Cart");
 const Product = require("../models/Product");
 const Variation = require("../models/Variation");
 const ShippingAddress = require("../models/ShippingAddress");
-const BillingDetails = require("../models/BIllingDetails")
+const BillingDetails = require("../models/BIllingDetails");
+const WatchList = require("../models/WatchList");
 const jwtSecretKey = process.env.JWT_SECRET_KEY;
 
 // Register a new user
@@ -386,7 +387,8 @@ const loginSuperAdmin = async (req, res) => {
 const addToCart = async (req, res) => {
   try {
     const userId = req.user.userId; // Get the userId from the request object
-    const { productId, variationId, count, price } = req.body;
+    const { productId, variationId, count, price, thumbnail, size, color } =
+      req.body;
 
     // Check if any of the required values are missing
     if (!productId || !variationId || !count || !price) {
@@ -428,6 +430,9 @@ const addToCart = async (req, res) => {
         variationId: variationId,
         count: count,
         price: price,
+        thumbnail: thumbnail || "",
+        size: size || "",
+        color: color || "",
       });
     }
 
@@ -473,12 +478,9 @@ const removeCartItem = async (req, res) => {
         .status(200)
         .json({ message: "Product removed from cart successfully" });
     } else {
-      return res
-        .status(404)
-        .json({
-          message:
-            "Product with the specified variationId not found in the cart",
-        });
+      return res.status(404).json({
+        message: "Product with the specified variationId not found in the cart",
+      });
     }
   } catch (error) {
     console.error("Error removing from cart:", error);
@@ -495,17 +497,21 @@ const getCart = async (req, res) => {
     }
 
     // Fetch full product and variation details for each item in the cart
-    const newCart = await Promise.all(cart.products.map(async (product) => {
-      const productData = await Product.findOne({ _id: product.productId });
-      const variationData = await Variation.findOne({ _id: product.variationId });
+    const newCart = await Promise.all(
+      cart.products.map(async (product) => {
+        const productData = await Product.findOne({ _id: product.productId });
+        const variationData = await Variation.findOne({
+          _id: product.variationId,
+        });
 
-      // Construct a new object with complete product and variation details
-      return {
-        product: productData.toObject(), // Full product details
-        variation: variationData.toObject(), // Full variation details
-        count: product.count, // Include other cart item properties like count
-      };
-    }));
+        // Construct a new object with complete product and variation details
+        return {
+          product: productData.toObject(), // Full product details
+          variation: variationData.toObject(), // Full variation details
+          count: product.count, // Include other cart item properties like count
+        };
+      })
+    );
 
     res.status(200).json(newCart);
   } catch (error) {
@@ -516,7 +522,7 @@ const getCart = async (req, res) => {
 
 const updateCartItem = async (req, res) => {
   try {
-    const { variationId, count, price } = req.body;
+    const { variationId, count, price, thumbnail, size, color } = req.body;
 
     // Check if the user's cart exists
     const cart = await Cart.findOne({ userId: req.user.userId });
@@ -525,7 +531,9 @@ const updateCartItem = async (req, res) => {
     }
 
     // Find the item in the cart based on the variationId
-    const itemToUpdate = cart.products.find((product) => product.variationId === variationId);
+    const itemToUpdate = cart.products.find(
+      (product) => product.variationId === variationId
+    );
 
     if (!itemToUpdate) {
       return res.status(404).json({ message: "Item not found in the cart" });
@@ -538,6 +546,15 @@ const updateCartItem = async (req, res) => {
 
     if (price !== undefined) {
       itemToUpdate.price = price;
+    }
+    if (thumbnail !== undefined) {
+      itemToUpdate.thumbnail = thumbnail;
+    }
+    if (color !== undefined) {
+      itemToUpdate.color = color;
+    }
+    if (size !== undefined) {
+      itemToUpdate.size = size;
     }
 
     // Save the updated cart
@@ -724,14 +741,17 @@ const getShippingAddress = async (req, res) => {
     console.error("Error getting shipping address:", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
-}
+};
 const deleteShippingAddress = async (req, res) => {
   try {
     const userId = req.user.userId; // Get the userId from the request object
-    const {id} = req.params;
+    const { id } = req.params;
 
     // Find and delete the user's shipping address
-    const deletedShippingAddress = await ShippingAddress.findOneAndDelete({ user_id: userId,_id:id });
+    const deletedShippingAddress = await ShippingAddress.findOneAndDelete({
+      user_id: userId,
+      _id: id,
+    });
 
     if (!deletedShippingAddress) {
       return res.status(404).json({ message: "Shipping address not found" });
@@ -744,7 +764,6 @@ const deleteShippingAddress = async (req, res) => {
   }
 };
 // Import necessary modules and your BillingDetails model
-
 
 // Controller for adding a billing address
 const addBillingAddress = async (req, res) => {
@@ -861,9 +880,7 @@ const deleteBillingAddress = async (req, res) => {
     });
 
     if (!deletedBillingAddress) {
-      return res
-        .status(404)
-        .json({ message: "Billing address not found" });
+      return res.status(404).json({ message: "Billing address not found" });
     }
 
     res.status(200).json({ message: "Billing address deleted successfully" });
@@ -873,6 +890,86 @@ const deleteBillingAddress = async (req, res) => {
   }
 };
 
+const addToWatchlist = async (req, res) => {
+  try {
+    const userId = req.user.userId; // Get the userId from the request object
+    const { productId, variationId, price, thumbnail } = req.body;
+
+    // Check if a watchlist already exists for the user
+    let watchlist = await WatchList.findOne({ userId: userId });
+
+    if (!watchlist) {
+      // If no watchlist exists, create a new one
+      watchlist = new WatchList({
+        userId: userId,
+        products: [],
+      });
+    }
+
+    // Create a product object to add to the watchlist
+    const product = {
+      productId,
+      variationId,
+      userId,
+      price,
+      thumbnail: thumbnail || "",
+    };
+
+    // Check if the product already exists in the watchlist
+    const existingProductIndex = watchlist.products.findIndex(
+      (p) => p.productId === productId && p.variationId === variationId
+    );
+
+    if (existingProductIndex === -1) {
+      // If the product does not exist, add it to the watchlist
+      watchlist.products.push(product);
+    } else {
+      // If the product already exists, update its information
+      watchlist.products[existingProductIndex] = product;
+    }
+
+    // Save the watchlist to the database
+    await watchlist.save();
+
+    res.status(200).json({ message: "Watchlist updated/added successfully" });
+  } catch (error) {
+    console.error("Error updating/adding to watchlist:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+const deleteFromWatchlist = async (req, res) => {
+  try {
+    const userId = req.user.userId; // Get the userId from the request object
+    const { productId, variationId } = req.body;
+
+    // Find the user's watchlist
+    const watchlist = await WatchList.findOne({ userId: userId });
+
+    if (!watchlist) {
+      return res.status(404).json({ message: "Watchlist not found" });
+    }
+
+    // Find the index of the product in the watchlist's products array
+    const productIndex = watchlist.products.findIndex(
+      (p) => p.productId === productId && p.variationId === variationId
+    );
+
+    if (productIndex === -1) {
+      return res.status(404).json({ message: "Product not found in watchlist" });
+    }
+
+    // Remove the product from the watchlist
+    watchlist.products.splice(productIndex, 1);
+
+    // Save the updated watchlist
+    await watchlist.save();
+
+    res.status(200).json({ message: "Product removed from watchlist" });
+  } catch (error) {
+    console.error("Error deleting from watchlist:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
 
 
 module.exports = {
@@ -901,5 +998,6 @@ module.exports = {
   updateBillingAddress,
   getBillingAddress,
   deleteBillingAddress,
-
+  addToWatchlist,
+  deleteFromWatchlist
 };

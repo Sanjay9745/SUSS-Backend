@@ -46,6 +46,9 @@ const BillingDetailsSchema = new mongoose.Schema({
     user_id: {
         type: String,
     },
+    thumbnail:{
+        type:String
+    }
 });
 const BillingDetails  = mongoose.model('BillingDetails', BillingDetailsSchema);
 
