@@ -14,6 +14,9 @@ const vendorSchema = new mongoose.Schema({
   brand_description: {
     type: String,
   },
+  pickup_address: {
+    type: String,
+  },
   createdAt: {
     type: Date,
     default: Date.now,

@@ -89,7 +89,7 @@ const getVendorProfile = async (req, res) => {
 };
 
 const updateVendorProfile = async (req, res) => {
-  const { business_name, brand_description } = req.body;
+  const { business_name, brand_description,pickup_address } = req.body;
 
   try {
     if (!business_name || !brand_description) {
@@ -99,6 +99,7 @@ const updateVendorProfile = async (req, res) => {
     const vendor = await findVendorById(req.vendor.vendorId);
     vendor.business_name = business_name;
     vendor.brand_description = brand_description;
+    vendor.pickup_address = pickup_address || "";
     await vendor.save();
     res.status(200).json({ vendor });
   } catch (error) {
