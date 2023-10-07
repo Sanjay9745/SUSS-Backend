@@ -5,6 +5,9 @@ const productSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  gender:{
+    type:String,
+  },
   slug:{
     type:String,
     required:true,

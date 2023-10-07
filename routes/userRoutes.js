@@ -79,4 +79,5 @@ router.delete("/billing-address/:id", auth, UserController.deleteBillingAddress)
 router.post("/watchlist", auth, UserController.addToWatchlist);
 router.post("/remove-watchlist", auth, UserController.deleteFromWatchlist);
 router.get("/watchlist", auth, UserController.getWatchlist);
+
 module.exports = router;

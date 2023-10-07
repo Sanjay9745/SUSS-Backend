@@ -28,7 +28,7 @@ const createProduct = async (req, res) => {
     }
 
     const vendor = req.vendor;
-    const { name, slug, description, categoryId } = req.body;
+    const { name, slug, description,gender,categoryId } = req.body;
 
     if (!name || !description || !categoryId || !slug) {
       return res.status(400).json({ message: "Please enter all fields" });
@@ -70,6 +70,7 @@ const createProduct = async (req, res) => {
     const product = new Product({
       name,
       description,
+      gender,
       vendorId: vendor.vendorId,
       categoryId,
       images: imageObj,
@@ -95,7 +96,7 @@ const updateProduct = async (req, res) => {
     }
 
     const vendor = req.vendor;
-    const { name, slug, description, categoryId } = req.body;
+    const { name, slug, description,gender, categoryId } = req.body;
     const existingProduct = await Product.findOne({ slug: slug });
     if (existingProduct && existingProduct.slug !== slug) {
       return res.status(400).json({ message: "Slug already exists" });
@@ -150,6 +151,9 @@ const updateProduct = async (req, res) => {
 
     if (categoryId) {
       updateFields.categoryId = categoryId;
+    }
+    if (gender) {
+      updateFields.gender = gender;
     }
 
     const product = await Product.findOneAndUpdate(
@@ -906,7 +910,7 @@ const filterProducts = async (req, res) => {
 //this is long filtering time complex is 0(n)
 const filter = async (req, res) => {
   try {
-    const { startPrice, endPrice, size, color, vendor, category, limit, page,productId } =
+    const { startPrice, endPrice, size, color, vendor, category, limit, page,productId ,gender} =
       req.query;
     const productsWithVariations = [];
 
@@ -924,6 +928,7 @@ const filter = async (req, res) => {
             name: product.name,
             description: product.description,
             images: product.images || {},
+            gender:product.gender||"",
             price: null,
             offer_price: null,
             size: null,
@@ -951,6 +956,7 @@ const filter = async (req, res) => {
           name: product.name,
           description: product.description,
           images: product.images || {},
+          gender:product.gender||"",
           price: null,
           offer_price: null,
           size: null,
@@ -997,6 +1003,11 @@ const filter = async (req, res) => {
     if(productId){
       filteredProducts = filteredProducts.filter(
         (product) => product._id.toString() === productId
+      );
+    }
+    if(gender){
+      filteredProducts = filteredProducts.filter(
+        (product) => product.gender === gender
       );
     }
  
