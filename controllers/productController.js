@@ -257,9 +257,6 @@ const addVariation = async (req, res) => {
       dimensionX,
       dimensionY,
       dimensionZ,
-      offer_price,
-      offer_start_date,
-      offer_end_date,
       margin,
     } = req.body;
 
@@ -319,9 +316,6 @@ const addVariation = async (req, res) => {
         y: dimensionY,
         z: dimensionZ,
       },
-      offer_price,
-      offer_start_date,
-      offer_end_date,
       margin,
       vendorId: vendor.vendorId,
     });
@@ -348,9 +342,6 @@ const updateVariation = async (req, res) => {
       dimensionX,
       dimensionY,
       dimensionZ,
-      offer_price,
-      offer_start_date,
-      offer_end_date,
       margin,
     } = req.body;
 
@@ -409,16 +400,16 @@ const updateVariation = async (req, res) => {
     variation.dimension.z =
       dimensionZ !== undefined ? dimensionZ : variation.dimension.z || "";
 
-    variation.offer_price =
-      offer_price !== undefined ? offer_price : variation.offer_price || "";
-    variation.offer_start_date =
-      offer_start_date !== undefined
-        ? offer_start_date
-        : variation.offer_start_date || "";
-    variation.offer_end_date =
-      offer_end_date !== undefined
-        ? offer_end_date
-        : variation.offer_end_date || "";
+    // variation.offer_price =
+    //   offer_price !== undefined ? offer_price : variation.offer_price || "";
+    // variation.offer_start_date =
+    //   offer_start_date !== undefined
+    //     ? offer_start_date
+    //     : variation.offer_start_date || "";
+    // variation.offer_end_date =
+    //   offer_end_date !== undefined
+    //     ? offer_end_date
+    //     : variation.offer_end_date || "";
     variation.margin = margin !== undefined ? margin : variation.margin || "";
 
     // Create a new 'images' field with the updated image paths if imageObj is not empty
@@ -488,6 +479,17 @@ const deleteVariation = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
+const getVariationById = async (req, res) => {
+  try {
+    const { variationId } = req.params;
+    const variation = await Variation.findById(variationId);
+    res.status(200).json(variation);
+  } catch (error) {
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+}
+
+
 const getProductOfVendor = async (req, res) => {
   try {
     const vendor = req.vendor;
@@ -1044,6 +1046,7 @@ module.exports = {
   deleteCategory,
   updateCategory,
   getProductWithVariation,
+  getVariationById,
   getAllProductWithPrice,
   getProductByCategory,
   getProductByVendor,

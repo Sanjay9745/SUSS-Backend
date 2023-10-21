@@ -3,6 +3,7 @@ const router = express.Router();
 const AdminController = require("../controllers/adminController");
 const { check } = require("express-validator");
 const auth = require("../middleware/superAdminAuth");
+const productImage = require("../middleware/productImageUpload");
 // Route for superadmin registration
 
 router.post(
@@ -42,5 +43,7 @@ router.post('/delete-user', auth, AdminController.deleteUser)
 router.get('/single-user/:userId', auth, AdminController.singleUser)
 router.get('/get-all-vendors', auth, AdminController.getAllVendors);
 router.get('/single-vendor/:vendorId', auth, AdminController.singleVendor);
-
+router.post("/delete-product", auth, AdminController.deleteProduct);
+router.post("/update-product", productImage,auth,AdminController.updateProduct);
+router.post("/delete-variation", auth, AdminController.deleteVariation);
 module.exports = router;

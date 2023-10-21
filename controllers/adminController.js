@@ -6,6 +6,7 @@ const {
   generateOTP,
   generateRandomCode,
 } = require("./emailController");
+const path = require("path");
 const {
   createUser,
   findUserByEmail,
@@ -17,6 +18,9 @@ const {
 } = require("../helpers/userHelper"); // Import userHelper
 const User = require("../models/User");
 const Vendor = require("../models/Vendor");
+const { deleteVariationImages, unlinkUploadedFiles } = require("../helpers/productHelpers");
+const Product = require("../models/Product");
+const Variation = require("../models/Variation");
 const jwtSecretKey = process.env.ADMIN_JWT_SECRET_KEY;
 
 const registerSuperAdmin = async (req, res) => {
@@ -128,10 +132,12 @@ const singleUser = async (req, res) => {
 
 const updateUser= async (req, res) => {
   try {
-    const userId = req.body.userId; // Get the userId from the request object
-    const { name, email, password, userType } = req.body;
 
+    const { name, email, password, userType ,userId} = req.body;
     const user = await findUserById(userId);
+    if(!user){
+      return res.status(404).json({ message: "User not found" });
+    }
     if (name) user.name = name;
     if (email) user.email = email;
     if (password) user.password = password;
@@ -157,14 +163,29 @@ const deleteUser = async (req, res) => {
   }
 };
 const getAllUsers = async (req, res) => {
+  const page = parseInt(req.query.page) || 1; // Current page number, default is 1
+  const perPage = parseInt(req.query.perPage) || 10; // Number of users per page, default is 10
+  const search = req.query.search; // Search query
+
   try {
-    const users = await User.find({ userType: "user" });
+    let query = { userType: "user" };
+
+    if (search) {
+      query = { ...query, name: { $regex: search, $options: "i" } }; // Using regular expression for case-insensitive search
+    }
+
+    const users = await User.find(query)
+      .skip((page - 1) * perPage)
+      .limit(perPage);
+
     res.status(200).json(users);
   } catch (error) {
     console.error("Error getting all users:", error);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
+
 
 const getAllVendors = async (req, res) => {
   try {
@@ -187,7 +208,162 @@ const singleVendor = async (req, res) => {
   }
 };
 
+const deleteProduct = async (req, res) => {
+  try {
+const productId = req.body.productId; // Get the productId from the request object
+console.log(productId);
+    // Find the product by productId
+    const product = await Product.findOne({
+      _id: productId
+    });
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
 
+    // Delete all variations and their associated images
+    for (const variationId of product.variations) {
+      try {
+        await deleteVariationImages(variationId);
+        await Variation.findByIdAndDelete(variationId);
+      } catch (error) {
+        console.error("Error deleting variation:", error);
+        res.status(500).json({ message: "Internal Server Error" });
+      }
+    }
+
+    // Delete the product
+    for (const key in product.images) {
+      const imagePath = product.images[key];
+      const fullPath = path.join(__dirname, "..", "uploads", imagePath);
+
+      try {
+        // Delete the image file using fs.promises.unlink
+        await fs.unlink(fullPath);
+      } catch (error) {
+        console.error("Error deleting image:", error);
+      }
+    }
+    await Product.findByIdAndDelete(productId);
+    res.status(200).json({ message: "Product deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting product:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+const updateProduct = async (req, res) => {
+  try {
+    const files = req.files;
+    const { name, slug, description,gender, categoryId,productId } = req.body;
+    const existingProduct = await Product.findOne({ _id:productId});
+    if (existingProduct && existingProduct.slug !== slug) {
+      const productWithSlug = await Product.findOne({ slug:slug});
+      if (productWithSlug && productWithSlug._id.toString() !== productId){
+
+        return res.status(400).json({ message: "Slug already exists" });
+      }
+    }
+
+    // Create an object to store the images with numbered keys
+    const imageObj = {};
+    const uploadedFiles = [];
+
+    for (let index = 0; index < files.length; index++) {
+      const file = files[index];
+      const key = `image${index + 1}`;
+
+      try {
+        // Extract the filename from the file path
+        const filename = path.basename(file.path);
+        const imagePath = "productImage/" + filename;
+
+        // Update the product's images with the file path
+        imageObj[key] = imagePath;
+
+        uploadedFiles.push(file.path);
+      } catch (error) {
+        // Handle any errors that occur during file processing
+        console.error("Error processing file:", error);
+
+        // Unlink (delete) the uploaded files
+        await unlinkUploadedFiles(uploadedFiles);
+
+        // Return an error response
+        return res.status(500).json({ message: "Error processing files" });
+      }
+    }
+
+    const updateFields = {};
+
+    if (name) {
+      updateFields.name = name;
+    }
+
+    if (description) {
+      updateFields.description = description;
+    }
+
+    if (slug) {
+      updateFields.slug = slug;
+    }
+
+    if (Object.keys(imageObj).length > 0) {
+      updateFields.images = imageObj;
+    }
+
+    if (categoryId) {
+      updateFields.categoryId = categoryId;
+    }
+    if (gender) {
+      updateFields.gender = gender;
+    }
+
+    const product = await Product.findOneAndUpdate(
+      {_id: productId },
+      updateFields,
+      { new: true }
+    );
+
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    res.status(200).json({ message: "Product updated successfully", product });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+
+const deleteVariation = async (req, res) => {
+  try {
+    const { productId, variationId } = req.body;
+
+    // Find the product by productId
+    const product = await Product.findOne({
+      _id: productId,
+    });
+    if (!product) return res.status(400).json({ message: "Product not found" });
+    // Find the variation by variationId
+    const variation = await Variation.findById(variationId);
+    if (!variation)
+      return res.status(400).json({ message: "Variation not found" });
+
+    // Delete the variation
+    await deleteVariationImages(variationId);
+    await Variation.findByIdAndDelete(variationId);
+
+    // Remove the variation from the product's variations array
+    product.variations.pull(variationId);
+
+    // Save the updated product
+    await product.save();
+
+    res.status(200).json({ product });
+  } catch (error) {
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
 
 module.exports = {
   registerSuperAdmin,
@@ -199,4 +375,7 @@ module.exports = {
   deleteUser,
   getAllVendors,
   singleVendor,
+  deleteProduct,
+  updateProduct,
+  deleteVariation
 };

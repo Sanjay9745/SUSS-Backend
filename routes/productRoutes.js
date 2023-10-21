@@ -21,7 +21,7 @@ router.get("/products-with-price", ProductController.getAllProductWithPrice);
 router.get("/get/:productId", ProductController.getProductById);
 
 router.get("/get-product-from-slug", ProductController.getProductFromSlug);
-
+router.get("/get-variation/:variationId", ProductController.getVariationById);
 router.get(
   "/get-product-with-variation/:productId",
   ProductController.getProductWithVariation
