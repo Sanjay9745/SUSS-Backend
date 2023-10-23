@@ -4,11 +4,11 @@ const variationSchema = new mongoose.Schema({
   price: {
     type: Number,
     default:null,
-    required: true,
+
   },
   stock: {
     type: Number,
-    required: true,
+    default:0
   },
   productId: {
     type: String,
@@ -42,11 +42,11 @@ const variationSchema = new mongoose.Schema({
     default:null
   },
   offer_start_date: {
-    type: Date,
+    type: String,
     default:null
   },
   offer_end_date: {
-    type: Date,
+    type: String,
     default:null
   },
   margin: {

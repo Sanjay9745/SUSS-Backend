@@ -18,7 +18,11 @@ const {
 } = require("../helpers/userHelper"); // Import userHelper
 const User = require("../models/User");
 const Vendor = require("../models/Vendor");
-const { deleteVariationImages, unlinkUploadedFiles } = require("../helpers/productHelpers");
+const {
+  deleteVariationImages,
+  unlinkUploadedFiles,
+  deleteExistingImages,
+} = require("../helpers/productHelpers");
 const Product = require("../models/Product");
 const Variation = require("../models/Variation");
 const jwtSecretKey = process.env.ADMIN_JWT_SECRET_KEY;
@@ -130,12 +134,11 @@ const singleUser = async (req, res) => {
   }
 };
 
-const updateUser= async (req, res) => {
+const updateUser = async (req, res) => {
   try {
-
-    const { name, email, password, userType ,userId} = req.body;
+    const { name, email, password, userType, userId } = req.body;
     const user = await findUserById(userId);
-    if(!user){
+    if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
     if (name) user.name = name;
@@ -144,7 +147,7 @@ const updateUser= async (req, res) => {
     if (userType) user.userType = userType;
     await user.save();
 
-    res.status(200).json({ message: "User profile updated successfully"});
+    res.status(200).json({ message: "User profile updated successfully" });
   } catch (error) {
     console.error("Error updating user profile:", error);
     res.status(500).json({ message: "Internal Server Error" });
@@ -168,7 +171,7 @@ const getAllUsers = async (req, res) => {
   const search = req.query.search; // Search query
 
   try {
-    let query = { userType: "user" };
+    let query = {};
 
     if (search) {
       query = { ...query, name: { $regex: search, $options: "i" } }; // Using regular expression for case-insensitive search
@@ -184,8 +187,6 @@ const getAllUsers = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
-
-
 
 const getAllVendors = async (req, res) => {
   try {
@@ -210,11 +211,11 @@ const singleVendor = async (req, res) => {
 
 const deleteProduct = async (req, res) => {
   try {
-const productId = req.body.productId; // Get the productId from the request object
-console.log(productId);
+    const productId = req.body.productId; // Get the productId from the request object
+    console.log(productId);
     // Find the product by productId
     const product = await Product.findOne({
-      _id: productId
+      _id: productId,
     });
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
@@ -254,12 +255,11 @@ console.log(productId);
 const updateProduct = async (req, res) => {
   try {
     const files = req.files;
-    const { name, slug, description,gender, categoryId,productId } = req.body;
-    const existingProduct = await Product.findOne({ _id:productId});
+    const { name, slug, description, gender, categoryId, productId } = req.body;
+    const existingProduct = await Product.findOne({ _id: productId });
     if (existingProduct && existingProduct.slug !== slug) {
-      const productWithSlug = await Product.findOne({ slug:slug});
-      if (productWithSlug && productWithSlug._id.toString() !== productId){
-
+      const productWithSlug = await Product.findOne({ slug: slug });
+      if (productWithSlug && productWithSlug._id.toString() !== productId) {
         return res.status(400).json({ message: "Slug already exists" });
       }
     }
@@ -319,7 +319,7 @@ const updateProduct = async (req, res) => {
     }
 
     const product = await Product.findOneAndUpdate(
-      {_id: productId },
+      { _id: productId },
       updateFields,
       { new: true }
     );
@@ -333,7 +333,6 @@ const updateProduct = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
-
 
 const deleteVariation = async (req, res) => {
   try {
@@ -364,7 +363,104 @@ const deleteVariation = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
+const updateVariation = async (req, res) => {
+  const files = req.files;
+  try {
+    const {
+      price,
+      stock,
+      size,
+      color,
+      variationId,
+      weight,
+      dimensionX,
+      dimensionY,
+      dimensionZ,
+      margin,
+      offer_price,
+      offer_end_date,
+      offer_start_date,
+    } = req.body;
 
+    const imageObj = {};
+    const uploadedFiles = [];
+
+    for (let index = 0; index < files.length; index++) {
+      const file = files[index];
+      const key = `image${index + 1}`;
+
+      try {
+        // Extract the filename from the file path
+        const filename = path.basename(file.path);
+        const imagePath = "productImage/" + filename; // Remove the "uploads/" prefix
+
+        // Update the variation's image property with the concatenated path
+        imageObj[key] = imagePath;
+
+        uploadedFiles.push(file.path);
+      } catch (error) {
+        // Handle any errors that occur during file processing
+        console.error("Error processing file:", error);
+
+        // Unlink (delete) the uploaded files
+        await unlinkUploadedFiles(uploadedFiles);
+
+        // Return an error response
+        return res.status(500).json({ message: "Error processing files" });
+      }
+    }
+
+    const variation = await Variation.findOne({
+      _id: variationId,
+    });
+
+    if (!variation) {
+      return res.status(404).json({ message: "Variation not found" });
+    }
+
+    // Delete existing images before updating
+    if (variation.images) {
+      await deleteExistingImages(variation.images);
+    }
+
+    // Update fields using ternary conditional with the current value if undefined
+    variation.price =
+      price !== undefined ? Number(price) : variation.price || 0;
+    variation.stock = stock !== undefined ? stock : variation.stock || 0; // Assuming stock is a required field
+    variation.size = size !== undefined ? size : variation.size || "";
+    variation.color = color !== undefined ? color : variation.color || "";
+    variation.weight =
+      weight !== undefined ? Number(weight) : variation.weight || 0;
+    variation.dimension.x =
+      dimensionX !== undefined ? dimensionX : variation.dimension.x || "";
+    variation.dimension.y =
+      dimensionY !== undefined ? dimensionY : variation.dimension.y || "";
+    variation.dimension.z =
+      dimensionZ !== undefined ? dimensionZ : variation.dimension.z || "";
+
+    variation.offer_price =
+      offer_price !== undefined ? offer_price : variation.offer_price || "";
+    variation.offer_start_date =
+      offer_start_date !== undefined
+        ? offer_start_date
+        : variation.offer_start_date || "";
+    variation.offer_end_date =
+      offer_end_date !== undefined
+        ? offer_end_date
+        : variation.offer_end_date || "";
+    variation.margin = margin !== undefined ? margin : variation.margin || "";
+
+    // Create a new 'images' field with the updated image paths if imageObj is not empty
+    if (Object.keys(imageObj).length > 0) {
+      variation.images = imageObj;
+    }
+
+    await variation.save();
+    res.status(200).json({ variation });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
 module.exports = {
   registerSuperAdmin,
   loginSuperAdmin,
@@ -377,5 +473,6 @@ module.exports = {
   singleVendor,
   deleteProduct,
   updateProduct,
-  deleteVariation
+  deleteVariation,
+  updateVariation,
 };

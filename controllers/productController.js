@@ -633,7 +633,7 @@ const getAllCategories = async (req, res) => {
   //get products
   try {
     const categories = await Category.find({});
-    res.status(200).send(categories);
+    res.status(200).json(categories);
   } catch (error) {
     res.status(400).send(error.message);
   }
@@ -646,7 +646,7 @@ const deleteCategory = async (req, res) => {
       _id: req.params.categoryId,
     });
     if (!category) return res.status(400).send("Category not found");
-    res.status(201).json({ category });
+    res.status(200).json({ category });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }

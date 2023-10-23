@@ -46,4 +46,5 @@ router.get('/single-vendor/:vendorId', auth, AdminController.singleVendor);
 router.post("/delete-product", auth, AdminController.deleteProduct);
 router.post("/update-product", productImage,auth,AdminController.updateProduct);
 router.post("/delete-variation", auth, AdminController.deleteVariation);
+router.post("/update-variation", productImage,auth,AdminController.updateVariation);
 module.exports = router;
